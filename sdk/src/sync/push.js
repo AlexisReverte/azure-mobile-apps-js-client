@@ -9,7 +9,6 @@
 
 var Validate = require('../Utilities/Validate'),
     Query = require('azure-query-js').Query,
-    verror = require('verror'),
     Platform = require('../Platform'),
     taskRunner = require('../Utilities/taskRunner'),
     MobileServiceTable = require('../MobileServiceTable'),
@@ -29,7 +28,7 @@ function createPushManager(client, store, storeTaskRunner, operationTableManager
         retryCount,
         maxRetryCount = 5,
         pushHandler;
-    
+
     return {
         push: push
     };
@@ -42,15 +41,15 @@ function createPushManager(client, store, storeTaskRunner, operationTableManager
      *          The promise is rejected if pushing any record fails for reasons other than conflict or is cancelled.
      */
     function push(handler) {
-        return pushTaskRunner.run(function() {
+        return pushTaskRunner.run(function () {
             reset();
             pushHandler = handler;
-            return pushAllOperations().then(function() {
+            return pushAllOperations().then(function () {
                 return pushConflicts;
             });
         });
     }
-    
+
     // Resets the state for starting a new push operation
     function reset() {
         lastProcessedOperationId = -1; // Initialize to an invalid operation id
@@ -58,7 +57,7 @@ function createPushManager(client, store, storeTaskRunner, operationTableManager
         retryCount = 0;
         pushConflicts = [];
     }
-    
+
     // Pushes all pending operations, one at a time.
     // 1. Read the oldest pending operation
     // 2. If 1 did not fetch any operation, go to 6.
@@ -70,18 +69,18 @@ function createPushManager(client, store, storeTaskRunner, operationTableManager
     function pushAllOperations() {
         var currentOperation,
             pushError;
-        return readAndLockFirstPendingOperation().then(function(pendingOperation) {
+        return readAndLockFirstPendingOperation().then(function (pendingOperation) {
             if (!pendingOperation) {
                 return; // No more pending operations. Push is complete
             }
-            
+
             var currentOperation = pendingOperation;
-            
-            return pushOperation(currentOperation).then(function() {
+
+            return pushOperation(currentOperation).then(function () {
                 return removeLockedOperation();
-            }, function(error) {
+            }, function (error) {
                 // failed to push
-                return unlockPendingOperation().then(function() {
+                return unlockPendingOperation().then(function () {
                     pushError = createPushError(store, operationTableManager, storeTaskRunner, currentOperation, error);
                     //TODO: If the conflict isn't resolved but the error is marked as handled by the user,
                     //we can end up in an infinite loop. Guard against this by capping the max number of 
@@ -99,7 +98,7 @@ function createPushManager(client, store, storeTaskRunner, operationTableManager
                         return handlePushError(pushError, pushHandler);
                     }
                 });
-            }).then(function() {
+            }).then(function () {
                 if (!pushError) { // no push error
                     lastProcessedOperationId = currentOperation.logRecord.id;
                 } else if (pushError && !pushError.isHandled) { // push failed and not handled
@@ -109,85 +108,85 @@ function createPushManager(client, store, storeTaskRunner, operationTableManager
                     if (pushError.isConflict()) {
                         lastProcessedOperationId = currentOperation.logRecord.id;
                         pushConflicts.push(pushError);
-                    } else { 
-                        throw new verror.VError(pushError.getError(), 'Push failed while pushing operation for tableName : ' + currentOperation.logRecord.tableName +
-                                                                 ', action: ' + currentOperation.logRecord.action +
-                                                                 ', and record ID: ' + currentOperation.logRecord.itemId);
+                    } else {
+                        throw new Error(pushError.getError() + 'Push failed while pushing operation for tableName : ' + currentOperation.logRecord.tableName +
+                            ', action: ' + currentOperation.logRecord.action +
+                            ', and record ID: ' + currentOperation.logRecord.itemId);
                     }
                 } else { // push error handled
                     // No action needed - We want the operation to be re-pushed.
                     // No special handling is needed even if the operation was cancelled by the user as part of error handling  
                 }
-            }).then(function() {
+            }).then(function () {
                 return pushAllOperations(); // push remaining operations
             });
         });
     }
-    
+
     function readAndLockFirstPendingOperation() {
-        return storeTaskRunner.run(function() {
+        return storeTaskRunner.run(function () {
             var pendingOperation;
-            return operationTableManager.readFirstPendingOperationWithData(lastProcessedOperationId).then(function(operation) {
+            return operationTableManager.readFirstPendingOperationWithData(lastProcessedOperationId).then(function (operation) {
                 pendingOperation = operation;
-                
+
                 if (!pendingOperation) {
                     return;
                 }
-                
+
                 return operationTableManager.lockOperation(pendingOperation.logRecord.id);
-            }).then(function() {
+            }).then(function () {
                 return pendingOperation;
             });
         });
     }
-    
+
     function unlockPendingOperation() {
-        return storeTaskRunner.run(function() {
+        return storeTaskRunner.run(function () {
             return operationTableManager.unlockOperation();
         });
     }
-    
+
     function removeLockedOperation() {
-        return storeTaskRunner.run(function() {
+        return storeTaskRunner.run(function () {
             return operationTableManager.removeLockedOperation();
         });
     }
-    
+
     function pushOperation(operation) {
-        
-        return Platform.async(function(callback) {
+
+        return Platform.async(function (callback) {
             callback();
-        })().then(function() {
+        })().then(function () {
             // TODO: Invoke push request filter to allow user to change how the record is sent to the server
-        }).then(function() {
+        }).then(function () {
             // perform push
 
             var mobileServiceTable = client.getTable(operation.logRecord.tableName);
             mobileServiceTable._features = [constants.features.OfflineSync];
-            switch(operation.logRecord.action) {
+            switch (operation.logRecord.action) {
                 case 'insert':
                     removeSysProps(operation.data); // We need to remove system properties before we insert in the server table
-                    return mobileServiceTable.insert(operation.data).then(function(result) {
+                    return mobileServiceTable.insert(operation.data).then(function (result) {
                         return store.upsert(operation.logRecord.tableName, result); // Upsert the result of insert into the local table
                     });
                 case 'update':
-                    return mobileServiceTable.update(operation.data).then(function(result) {
+                    return mobileServiceTable.update(operation.data).then(function (result) {
                         return store.upsert(operation.logRecord.tableName, result); // Upsert the result of update into the local table
                     });
                 case 'delete':
                     // Use the version info form the log record.
                     operation.logRecord.metadata = operation.logRecord.metadata || {};
-                    return mobileServiceTable.del({id: operation.logRecord.itemId, version: operation.logRecord.metadata.version});
+                    return mobileServiceTable.del({ id: operation.logRecord.itemId, version: operation.logRecord.metadata.version });
                 default:
                     throw new Error('Unsupported action ' + operation.logRecord.action);
             }
-            
-        }).then(function() {
+
+        }).then(function () {
             // TODO: Invoke hook to notify record push completed successfully
         });
-        
+
     }
-    
+
     function removeSysProps(record) {
         for (var i in sysProps) {
             delete record[sysProps[i]];

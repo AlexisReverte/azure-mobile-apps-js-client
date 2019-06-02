@@ -9,7 +9,7 @@ var Validate = require('../Utilities/Validate'),
     createPullManager = require('./pull').createPullManager,
     createPushManager = require('./push').createPushManager,
     createPurgeManager = require('./purge').createPurgeManager,
-    uuid = require('uuid'),
+    uuidv4 = require('uuid/v4'),
     _ = require('../Utilities/Extensions');
 
 
@@ -63,7 +63,7 @@ var Validate = require('../Utilities/Validate'),
 function MobileServiceSyncContext(client) {
 
     Validate.notNull(client, 'client');
-    
+
     var store,
         operationTableManager,
         pullManager,
@@ -84,26 +84,26 @@ function MobileServiceSyncContext(client) {
       *                    If initialization fails, the promise is rejected with the error.
      */
     this.initialize = function (localStore) {
-        
-        return Platform.async(function(callback) {
+
+        return Platform.async(function (callback) {
             Validate.isObject(localStore);
             Validate.notNull(localStore);
-            
+
             callback(null, createOperationTableManager(localStore));
-        })().then(function(opManager) {
+        })().then(function (opManager) {
             operationTableManager = opManager;
             return operationTableManager.initialize(localStore);
-        }).then(function() {
+        }).then(function () {
             store = localStore;
             pullManager = createPullManager(client, store, storeTaskRunner, operationTableManager);
             pushManager = createPushManager(client, store, storeTaskRunner, operationTableManager);
             purgeManager = createPurgeManager(store, storeTaskRunner);
-        }).then(function() {
+        }).then(function () {
             return pullManager.initialize();
-        }).then(function() {
+        }).then(function () {
             isInitialized = true;
         });
-        
+
     };
 
     /**
@@ -119,12 +119,12 @@ function MobileServiceSyncContext(client) {
      *                    If the operation fails, the promise is rejected with the error.
      */
     this.insert = function (tableName, instance) { //TODO: add an insert method to the store
-        return storeTaskRunner.run(function() {
+        return storeTaskRunner.run(function () {
             validateInitialization();
-            
+
             // Generate an id if it is not set already 
             if (_.isNull(instance.id)) {
-                instance.id = uuid.v4();
+                instance.id = uuidv4();
             }
 
             // Delegate parameter validation to upsertWithLogging
@@ -144,9 +144,9 @@ function MobileServiceSyncContext(client) {
      *                    If the operation fails, the promise is rejected.
      */
     this.update = function (tableName, instance) { //TODO: add an update method to the store
-        return storeTaskRunner.run(function() {
+        return storeTaskRunner.run(function () {
             validateInitialization();
-            
+
             // Delegate parameter validation to upsertWithLogging
             return upsertWithLogging(tableName, instance, 'update', true /* shouldOverwrite */);
         });
@@ -167,10 +167,10 @@ function MobileServiceSyncContext(client) {
      *                    If the operation fails, the promise is rejected with the error.
      */
     this.lookup = function (tableName, id, suppressRecordNotFoundError) {
-        
-        return Platform.async(function(callback) {
+
+        return Platform.async(function (callback) {
             validateInitialization();
-            
+
             Validate.isString(tableName, 'tableName');
             Validate.notNullOrEmpty(tableName, 'tableName');
 
@@ -179,9 +179,9 @@ function MobileServiceSyncContext(client) {
             if (!store) {
                 throw new Error('MobileServiceSyncContext not initialized');
             }
-            
+
             callback();
-        })().then(function() {
+        })().then(function () {
             return store.lookup(tableName, id, suppressRecordNotFoundError);
         });
     };
@@ -196,10 +196,10 @@ function MobileServiceSyncContext(client) {
      *                    If read fails, the promise is rejected with the error.
      */
     this.read = function (query) {
-        
-        return Platform.async(function(callback) {
+
+        return Platform.async(function (callback) {
             callback();
-        })().then(function() {
+        })().then(function () {
             validateInitialization();
 
             Validate.notNull(query, 'query');
@@ -221,10 +221,10 @@ function MobileServiceSyncContext(client) {
      *                    If the operation fails, the promise is rejected with the error.
      */
     this.del = function (tableName, instance) {
-        
-        return storeTaskRunner.run(function() {
+
+        return storeTaskRunner.run(function () {
             validateInitialization();
-            
+
             Validate.isString(tableName, 'tableName');
             Validate.notNullOrEmpty(tableName, 'tableName');
 
@@ -235,7 +235,7 @@ function MobileServiceSyncContext(client) {
                 throw new Error('MobileServiceSyncContext not initialized');
             }
 
-            return operationTableManager.getLoggingOperation(tableName, 'delete', instance).then(function(loggingOperation) {
+            return operationTableManager.getLoggingOperation(tableName, 'delete', instance).then(function (loggingOperation) {
                 return store.executeBatch([
                     {
                         action: 'delete',
@@ -247,7 +247,7 @@ function MobileServiceSyncContext(client) {
             });
         });
     };
-    
+
     /**
      * Pulls changes from server table into the local store.
      * 
@@ -259,16 +259,16 @@ function MobileServiceSyncContext(client) {
      * 
      * @returns {Promise} A promise that is fulfilled when all records are pulled OR is rejected if the pull fails or is cancelled.  
      */
-    this.pull = function (query, queryId, settings) { 
+    this.pull = function (query, queryId, settings) {
         //TODO: Implement cancel
         //TODO: Perform push before pulling
-        return syncTaskRunner.run(function() {
+        return syncTaskRunner.run(function () {
             validateInitialization();
-            
+
             return pullManager.pull(query, queryId, settings);
         });
     };
-    
+
     /**
      * Pushes local changes to the corresponding tables on the server.
      * 
@@ -279,13 +279,13 @@ function MobileServiceSyncContext(client) {
      *                    The returned promise is rejected if the push fails.  
      */
     this.push = function () { //TODO: Implement cancel
-        return syncTaskRunner.run(function() {
+        return syncTaskRunner.run(function () {
             validateInitialization();
 
             return pushManager.push(this.pushHandler);
         }.bind(this));
     };
-    
+
     /**
      * Purges data from the local table as well as pending operations and any incremental sync state 
      * associated with the table.
@@ -301,7 +301,7 @@ function MobileServiceSyncContext(client) {
      * @returns {Promise} A promise that is fulfilled when purge is complete OR is rejected if it fails.  
      */
     this.purge = function (query, forcePurge) {
-        return syncTaskRunner.run(function() {
+        return syncTaskRunner.run(function () {
             Validate.isObject(query, 'query');
             Validate.notNull(query, 'query');
             if (!_.isNull(forcePurge)) {
@@ -323,10 +323,10 @@ function MobileServiceSyncContext(client) {
     this._getOperationTableManager = function () {
         return operationTableManager;
     };
-    this._getPurgeManager = function() {
+    this._getPurgeManager = function () {
         return purgeManager;
     };
-    
+
     // Performs upsert and logs the action in the operation table
     // Validates parameters. Callers can skip validation
     function upsertWithLogging(tableName, instance, action, shouldOverwrite) {
@@ -335,18 +335,18 @@ function MobileServiceSyncContext(client) {
 
         Validate.notNull(instance, 'instance');
         Validate.isValidId(instance.id, 'instance.id');
-        
+
         if (!store) {
             throw new Error('MobileServiceSyncContext not initialized');
         }
-        
-        return store.lookup(tableName, instance.id, true /* suppressRecordNotFoundError */).then(function(existingRecord) {
+
+        return store.lookup(tableName, instance.id, true /* suppressRecordNotFoundError */).then(function (existingRecord) {
             if (existingRecord && !shouldOverwrite) {
                 throw new Error('Record with id ' + existingRecord.id + ' already exists in the table ' + tableName);
             }
-        }).then(function() {
+        }).then(function () {
             return operationTableManager.getLoggingOperation(tableName, action, instance);
-        }).then(function(loggingOperation) {
+        }).then(function (loggingOperation) {
             return store.executeBatch([
                 {
                     action: 'upsert',
@@ -355,7 +355,7 @@ function MobileServiceSyncContext(client) {
                 },
                 loggingOperation
             ]);
-        }).then(function() {
+        }).then(function () {
             return instance;
         });
     }
@@ -363,7 +363,7 @@ function MobileServiceSyncContext(client) {
     // Throws an error if the sync context is not initialized
     function validateInitialization() {
         if (!isInitialized) {
-            throw new Error ('MobileServiceSyncContext is being used before it is initialized');
+            throw new Error('MobileServiceSyncContext is being used before it is initialized');
         }
     }
 }
