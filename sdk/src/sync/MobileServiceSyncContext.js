@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ----------------------------------------------------------------------------
 
-var Validate = require('../Utilities/Validate'),
+const Validate = require('../Utilities/Validate'),
     Platform = require('../Platform'),
     createOperationTableManager = require('./operations').createOperationTableManager,
     taskRunner = require('../Utilities/taskRunner'),
@@ -10,7 +10,7 @@ var Validate = require('../Utilities/Validate'),
     createPushManager = require('./push').createPushManager,
     createPurgeManager = require('./purge').createPurgeManager,
     uuidv4 = require('uuid/v4'),
-    _ = require('../Utilities/Extensions');
+    extensions = require('../Utilities/Extensions');
 
 
 // NOTE: The store can be a custom store provided by the user code.
@@ -123,7 +123,7 @@ function MobileServiceSyncContext(client) {
             validateInitialization();
 
             // Generate an id if it is not set already 
-            if (_.isNull(instance.id)) {
+            if (extensions.isNull(instance.id)) {
                 instance.id = uuidv4();
             }
 
@@ -304,7 +304,7 @@ function MobileServiceSyncContext(client) {
         return syncTaskRunner.run(function () {
             Validate.isObject(query, 'query');
             Validate.notNull(query, 'query');
-            if (!_.isNull(forcePurge)) {
+            if (!extensions.isNull(forcePurge)) {
                 Validate.isBool(forcePurge, 'forcePurge');
             }
 

@@ -2,23 +2,22 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ----------------------------------------------------------------------------
 
-var _ = require('./Utilities/Extensions');
-var Validate = require('./Utilities/Validate');
-var Platform = require('./Platform');
-var Query = require('azure-query-js').Query;
-var constants = require('./constants');
-var tableHelper = require('./tableHelper');
+const extensions = require('./Utilities/Extensions');
+const Validate = require('./Utilities/Validate');
+const Platform = require('./Platform');
+const Query = require('azure-query-js').Query;
+const constants = require('./constants');
+const tableHelper = require('./tableHelper');
 
 // Name of the reserved Mobile Services ID member.
-var idPropertyName = "id";
 
 // The route separator used to denote the table in a uri like
 // .../{app}/collections/{coll}.
-var tableRouteSeperatorName = "tables";
-var idNames = ["ID", "Id", "id", "iD"];
-var nextLinkRegex = /^(.*?);\s*rel\s*=\s*(\w+)\s*$/;
+const tableRouteSeperatorName = "tables";
+const idNames = ["ID", "Id", "id", "iD"];
+const nextLinkRegex = /^(.*?);\s*rel\s*=\s*(\w+)\s*$/;
 
-var SystemProperties = {
+const SystemProperties = {
     None: 0,
     CreatedAt: 1,
     UpdatedAt: 2,
@@ -26,7 +25,7 @@ var SystemProperties = {
     All: 0xFFFF
 };
 
-var MobileServiceSystemColumns = {
+const MobileServiceSystemColumns = {
     CreatedAt: "createdAt",
     UpdatedAt: "updatedAt",
     Version: "version",
@@ -85,21 +84,20 @@ MobileServiceTable.prototype._read = function (query, parameters, callback) {
     /// </param>
 
     // Account for absent optional arguments
-    if (_.isNull(callback))
-    {
-        if (_.isNull(parameters) && (typeof query === 'function')) {
+    if (extensions.isNull(callback)) {
+        if (extensions.isNull(parameters) && (typeof query === 'function')) {
             callback = query;
             query = null;
             parameters = null;
         } else if (typeof parameters === 'function') {
             callback = parameters;
             parameters = null;
-            if (!_.isNull(query) && _.isObject(query)) {
+            if (!extensions.isNull(query) && extensions.isObject(query)) {
                 // This 'query' argument could be either the query or the user-defined 
                 // parameters object since both are optional.  A query is either (a) a simple string 
                 // or (b) an Object with an toOData member. A user-defined parameters object is just 
                 // an Object.  We need to detect which of these has been passed in here.
-                if (!_.isString(query) && _.isNull(query.toOData)) {
+                if (!extensions.isString(query) && extensions.isNull(query.toOData)) {
                     parameters = query;
                     query = null;
                 }
@@ -108,10 +106,10 @@ MobileServiceTable.prototype._read = function (query, parameters, callback) {
     }
 
     // Validate the arguments
-    if (query && _.isString(query)) {
+    if (query && extensions.isString(query)) {
         Validate.notNullOrEmpty(query, 'query');
     }
-    if (!_.isNull(parameters)) {
+    if (!extensions.isNull(parameters)) {
         Validate.isValidParametersObject(parameters, 'parameters');
     }
     Validate.notNull(callback, 'callback');
@@ -121,12 +119,12 @@ MobileServiceTable.prototype._read = function (query, parameters, callback) {
     var queryString = null;
     var projection = null;
     var features = this._features || [];
-    if (_.isString(query)) {
+    if (extensions.isString(query)) {
         queryString = query;
-        if (!_.isNullOrEmpty(query)) {
+        if (!extensions.isNullOrEmpty(query)) {
             features.push(constants.features.TableReadRaw);
         }
-    } else if (_.isObject(query) && !_.isNull(query.toOData)) {
+    } else if (extensions.isObject(query) && !extensions.isNull(query.toOData)) {
         if (query.getComponents) {
             features.push(constants.features.TableReadQuery);
             var components = query.getComponents();
@@ -134,9 +132,9 @@ MobileServiceTable.prototype._read = function (query, parameters, callback) {
             if (components.table) {
                 // If the query has a table name, make sure it's compatible with
                 // the table executing the query
-                
+
                 if (tableName !== components.table) {
-                    var message = _.format(Platform.getResourceString("MobileServiceTable_ReadMismatchedQueryTables"), tableName, components.table);
+                    var message = extensions.format(Platform.getResourceString("MobileServiceTable_ReadMismatchedQueryTables"), tableName, components.table);
                     callback(new Error(message), null);
                     return;
                 }
@@ -152,26 +150,26 @@ MobileServiceTable.prototype._read = function (query, parameters, callback) {
     addQueryParametersFeaturesIfApplicable(features, parameters);
 
     // Add any user-defined query string parameters
-    if (!_.isNull(parameters)) {
-        var userDefinedQueryString = _.url.getQueryString(parameters);
-        if (!_.isNullOrEmpty(queryString)) {
+    if (!extensions.isNull(parameters)) {
+        var userDefinedQueryString = extensions.url.getQueryString(parameters);
+        if (!extensions.isNullOrEmpty(queryString)) {
             queryString += '&' + userDefinedQueryString;
         }
         else {
             queryString = userDefinedQueryString;
         }
     }
-    
+
     // Construct the URL
     var urlFragment = queryString;
-    if (!_.url.isAbsoluteUrl(urlFragment)) {
-        urlFragment = _.url.combinePathSegments(tableRouteSeperatorName, tableName);
-        if (!_.isNull(queryString)) {
-            urlFragment = _.url.combinePathAndQuery(urlFragment, queryString);
+    if (!extensions.url.isAbsoluteUrl(urlFragment)) {
+        urlFragment = extensions.url.combinePathSegments(tableRouteSeperatorName, tableName);
+        if (!extensions.isNull(queryString)) {
+            urlFragment = extensions.url.combinePathAndQuery(urlFragment, queryString);
         }
     }
 
-    var headers = { };
+    var headers = {};
     headers[constants.apiVersionHeaderName] = constants.apiVersion;
 
     // Make the request
@@ -184,9 +182,9 @@ MobileServiceTable.prototype._read = function (query, parameters, callback) {
         features,
         function (error, response) {
             var values = null;
-            if (_.isNull(error)) {
+            if (extensions.isNull(error)) {
                 // Parse the response
-                values = _.fromJson(response.responseText);
+                values = extensions.fromJson(response.responseText);
 
                 // If the values include the total count, we'll attach that
                 // directly to the array
@@ -209,10 +207,10 @@ MobileServiceTable.prototype._read = function (query, parameters, callback) {
                 }
 
                 // Grab link header when possible
-                if (Array.isArray(values) && response.getResponseHeader && _.isNull(values.nextLink)) {
+                if (Array.isArray(values) && response.getResponseHeader && extensions.isNull(values.nextLink)) {
                     try {
                         var link = response.getResponseHeader('Link');
-                        if (!_.isNullOrEmpty(link)) {
+                        if (!extensions.isNullOrEmpty(link)) {
                             var result = nextLinkRegex.exec(link);
 
                             // Only add nextLink when relation is next
@@ -266,14 +264,14 @@ MobileServiceTable.prototype.insert = Platform.async(
     function (instance, parameters, callback) {
 
         // Account for absent optional arguments
-        if (_.isNull(callback) && (typeof parameters === 'function')) {
+        if (extensions.isNull(callback) && (typeof parameters === 'function')) {
             callback = parameters;
             parameters = null;
         }
 
         // Validate the arguments
         Validate.notNull(instance, 'instance');
-        if (!_.isNull(parameters)) {
+        if (!extensions.isNull(parameters)) {
             Validate.isValidParametersObject(parameters);
         }
         Validate.notNull(callback, 'callback');
@@ -282,16 +280,16 @@ MobileServiceTable.prototype.insert = Platform.async(
         for (var i in idNames) {
             var id = instance[idNames[i]];
 
-            if (!_.isNullOrZero(id)) {
-                if (_.isString(id)) {
+            if (!extensions.isNullOrZero(id)) {
+                if (extensions.isString(id)) {
                     // String Id's are allowed iif using 'id'
-                    if (idNames[i] !== idPropertyName) {
-                        throw new Error('Cannot insert if the ' + idPropertyName + ' member is already set.');
+                    if (idNames[i] !== 'id') {
+                        throw new Error('Cannot insert if the ' + 'id' + ' member is already set.');
                     } else {
-                        Validate.isValidId(id, idPropertyName);
+                        Validate.isValidId(id, 'id');
                     }
                 } else {
-                    throw new Error('Cannot insert if the ' + idPropertyName + ' member is already set.');
+                    throw new Error('Cannot insert if the ' + 'id' + ' member is already set.');
                 }
             }
         }
@@ -300,13 +298,13 @@ MobileServiceTable.prototype.insert = Platform.async(
         features = addQueryParametersFeaturesIfApplicable(features, parameters);
 
         // Construct the URL
-        var urlFragment = _.url.combinePathSegments(tableRouteSeperatorName, this.getTableName());
-        if (!_.isNull(parameters)) {
-            var queryString = _.url.getQueryString(parameters);
-            urlFragment = _.url.combinePathAndQuery(urlFragment, queryString);
+        var urlFragment = extensions.url.combinePathSegments(tableRouteSeperatorName, this.getTableName());
+        if (!extensions.isNull(parameters)) {
+            var queryString = extensions.url.getQueryString(parameters);
+            urlFragment = extensions.url.combinePathAndQuery(urlFragment, queryString);
         }
 
-        var headers = { };
+        var headers = {};
         headers[constants.apiVersionHeaderName] = constants.apiVersion;
 
         // Make the request
@@ -318,7 +316,7 @@ MobileServiceTable.prototype.insert = Platform.async(
             headers,
             features,
             function (error, response) {
-                if (!_.isNull(error)) {
+                if (!extensions.isNull(error)) {
                     callback(error, null);
                 } else {
                     var result = getItemFromResponse(response);
@@ -344,22 +342,22 @@ MobileServiceTable.prototype.insert = Platform.async(
  *                    If the operation fails, the promise is rejected with the error.
  */
 MobileServiceTable.prototype.update = Platform.async(
-    function (instance, parameters, callback) {
-        var version,
+    (instance, parameters, callback) => {
+        let version,
             headers = {},
             features = this._features || [],
             serverInstance;
 
         // Account for absent optional arguments
-        if (_.isNull(callback) && (typeof parameters === 'function')) {
+        if (extensions.isNull(callback) && (typeof parameters === 'function')) {
             callback = parameters;
             parameters = null;
         }
 
         // Validate the arguments
         Validate.notNull(instance, 'instance');
-        Validate.isValidId(instance[idPropertyName], 'instance.' + idPropertyName);
-        if (!_.isNull(parameters)) {
+        Validate.isValidId(instance['id'], 'instance.' + 'id');
+        if (!extensions.isNull(parameters)) {
             Validate.isValidParametersObject(parameters, 'parameters');
         }
         Validate.notNull(callback, 'callback');
@@ -367,7 +365,7 @@ MobileServiceTable.prototype.update = Platform.async(
         version = instance[MobileServiceSystemColumns.Version];
         serverInstance = removeSystemProperties(instance);
 
-        if (!_.isNullOrEmpty(version)) {
+        if (!extensions.isNullOrEmpty(version)) {
             headers['If-Match'] = getEtagFromVersion(version);
             features.push(constants.features.OptimisticConcurrency);
         }
@@ -377,13 +375,13 @@ MobileServiceTable.prototype.update = Platform.async(
         features = addQueryParametersFeaturesIfApplicable(features, parameters);
 
         // Construct the URL
-        var urlFragment =  _.url.combinePathSegments(
-                tableRouteSeperatorName,
-                this.getTableName(),
-                encodeURIComponent(instance[idPropertyName].toString()));
-        if (!_.isNull(parameters)) {
-            var queryString = _.url.getQueryString(parameters);
-            urlFragment = _.url.combinePathAndQuery(urlFragment, queryString);
+        var urlFragment = extensions.url.combinePathSegments(
+            tableRouteSeperatorName,
+            this.getTableName(),
+            encodeURIComponent(instance['id'].toString()));
+        if (!extensions.isNull(parameters)) {
+            var queryString = extensions.url.getQueryString(parameters);
+            urlFragment = extensions.url.combinePathAndQuery(urlFragment, queryString);
         }
 
         // Make the request
@@ -395,7 +393,7 @@ MobileServiceTable.prototype.update = Platform.async(
             headers,
             features,
             function (error, response) {
-                if (!_.isNull(error)) {
+                if (!extensions.isNull(error)) {
                     setServerItemIfPreconditionFailed(error);
                     callback(error);
                 } else {
@@ -423,50 +421,49 @@ MobileServiceTable.prototype.refresh = Platform.async(
         /// </param>
 
         // Account for absent optional arguments
-        if (_.isNull(callback) && (typeof parameters === 'function')) {
+        if (extensions.isNull(callback) && (typeof parameters === 'function')) {
             callback = parameters;
             parameters = null;
         }
 
         // Validate the arguments
         Validate.notNull(instance, 'instance');
-        if (!_.isValidId(instance[idPropertyName], idPropertyName))
-        {
-            if (typeof instance[idPropertyName] === 'string' && instance[idPropertyName] !== '') {
-                throw new Error(idPropertyName + ' "' + instance[idPropertyName] + '" is not valid.');
+        if (!extensions.isValidId(instance['id'], 'id')) {
+            if (typeof instance['id'] === 'string' && instance['id'] !== '') {
+                throw new Error('id' + ' "' + instance['id'] + '" is not valid.');
             } else {
                 callback(null, instance);
             }
             return;
         }
 
-        if (!_.isNull(parameters)) {
+        if (!extensions.isNull(parameters)) {
             Validate.isValidParametersObject(parameters, 'parameters');
         }
         Validate.notNull(callback, 'callback');
 
         // Construct the URL
-        var urlFragment = _.url.combinePathSegments(
-                tableRouteSeperatorName,
-                this.getTableName());
+        var urlFragment = extensions.url.combinePathSegments(
+            tableRouteSeperatorName,
+            this.getTableName());
 
-        if (typeof instance[idPropertyName] === 'string') {
-            var id = encodeURIComponent(instance[idPropertyName]).replace(/\'/g, '%27%27');
-            urlFragment = _.url.combinePathAndQuery(urlFragment, "?$filter=id eq '" + id + "'");
+        if (typeof instance['id'] === 'string') {
+            var id = encodeURIComponent(instance['id']).replace(/\'/g, '%27%27');
+            urlFragment = extensions.url.combinePathAndQuery(urlFragment, "?$filter=id eq '" + id + "'");
         } else {
-            urlFragment = _.url.combinePathAndQuery(urlFragment, "?$filter=id eq " + encodeURIComponent(instance[idPropertyName].toString()));
+            urlFragment = extensions.url.combinePathAndQuery(urlFragment, "?$filter=id eq " + encodeURIComponent(instance['id'].toString()));
         }
 
-        if (!_.isNull(parameters)) {
-            var queryString = _.url.getQueryString(parameters);
-            urlFragment = _.url.combinePathAndQuery(urlFragment, queryString);
+        if (!extensions.isNull(parameters)) {
+            var queryString = extensions.url.getQueryString(parameters);
+            urlFragment = extensions.url.combinePathAndQuery(urlFragment, queryString);
         }
 
         var features = this._features || [];
         features.push(constants.features.TableRefreshCall);
         features = addQueryParametersFeaturesIfApplicable(features, parameters);
 
-        var headers = { };
+        var headers = {};
         headers[constants.apiVersionHeaderName] = constants.apiVersion;
 
         // Make the request
@@ -478,18 +475,18 @@ MobileServiceTable.prototype.refresh = Platform.async(
             headers,
             features,
             function (error, response) {
-                if (!_.isNull(error)) {
+                if (!extensions.isNull(error)) {
                     callback(error, null);
                 } else {
-                    var result = _.fromJson(response.responseText);
+                    var result = extensions.fromJson(response.responseText);
                     if (Array.isArray(result)) {
                         result = result[0]; //get first object from array
                     }
 
                     if (!result) {
-                        var message =_.format(
+                        var message = extensions.format(
                             Platform.getResourceString("MobileServiceTable_NotSingleObject"),
-                            idPropertyName);
+                            'id');
                         callback(new Error(message), null);
                     }
 
@@ -529,33 +526,33 @@ MobileServiceTable.prototype.lookup = Platform.async(
         /// </param>
 
         // Account for absent optional arguments
-        if (_.isNull(callback) && (typeof parameters === 'function')) {
+        if (extensions.isNull(callback) && (typeof parameters === 'function')) {
             callback = parameters;
             parameters = null;
         }
 
         // Validate the arguments
-        Validate.isValidId(id, idPropertyName);
-        if (!_.isNull(parameters)) {
+        Validate.isValidId(id, 'id');
+        if (!extensions.isNull(parameters)) {
             Validate.isValidParametersObject(parameters);
         }
         Validate.notNull(callback, 'callback');
 
         // Construct the URL
-        var urlFragment = _.url.combinePathSegments(
-                tableRouteSeperatorName,
-                this.getTableName(),
-                encodeURIComponent(id.toString()));
+        var urlFragment = extensions.url.combinePathSegments(
+            tableRouteSeperatorName,
+            this.getTableName(),
+            encodeURIComponent(id.toString()));
 
         var features = this._features || [];
         features = addQueryParametersFeaturesIfApplicable(features, parameters);
 
-        if (!_.isNull(parameters)) {
-            var queryString = _.url.getQueryString(parameters);
-            urlFragment = _.url.combinePathAndQuery(urlFragment, queryString);
+        if (!extensions.isNull(parameters)) {
+            var queryString = extensions.url.getQueryString(parameters);
+            urlFragment = extensions.url.combinePathAndQuery(urlFragment, queryString);
         }
 
-        var headers = { };
+        var headers = {};
         headers[constants.apiVersionHeaderName] = constants.apiVersion;
 
         // Make the request
@@ -567,7 +564,7 @@ MobileServiceTable.prototype.lookup = Platform.async(
             headers,
             features,
             function (error, response) {
-                if (!_.isNull(error)) {
+                if (!extensions.isNull(error)) {
                     callback(error, null);
                 } else {
                     var result = getItemFromResponse(response);
@@ -595,20 +592,20 @@ MobileServiceTable.prototype.del = Platform.async(
     function (instance, parameters, callback) {
 
         // Account for absent optional arguments
-        if (_.isNull(callback) && (typeof parameters === 'function')) {
+        if (extensions.isNull(callback) && (typeof parameters === 'function')) {
             callback = parameters;
             parameters = null;
-        }        
+        }
 
         // Validate the arguments
         Validate.notNull(instance, 'instance');
-        Validate.isValidId(instance[idPropertyName], 'instance.' + idPropertyName);
+        Validate.isValidId(instance['id'], 'instance.' + 'id');
         Validate.notNull(callback, 'callback');
 
         var headers = {};
         var features = this._features || [];
-        if (_.isString(instance[idPropertyName])) {
-            if (!_.isNullOrEmpty(instance[MobileServiceSystemColumns.Version])) {
+        if (extensions.isString(instance['id'])) {
+            if (!extensions.isNullOrEmpty(instance[MobileServiceSystemColumns.Version])) {
                 headers['If-Match'] = getEtagFromVersion(instance[MobileServiceSystemColumns.Version]);
                 features.push(constants.features.OptimisticConcurrency);
             }
@@ -617,18 +614,18 @@ MobileServiceTable.prototype.del = Platform.async(
 
         features = addQueryParametersFeaturesIfApplicable(features, parameters);
 
-        if (!_.isNull(parameters)) {
+        if (!extensions.isNull(parameters)) {
             Validate.isValidParametersObject(parameters);
         }
 
         // Contruct the URL
-        var urlFragment =  _.url.combinePathSegments(
-                tableRouteSeperatorName,
-                this.getTableName(),
-                encodeURIComponent(instance[idPropertyName].toString()));
-        if (!_.isNull(parameters)) {
-            var queryString = _.url.getQueryString(parameters);
-            urlFragment = _.url.combinePathAndQuery(urlFragment, queryString);
+        var urlFragment = extensions.url.combinePathSegments(
+            tableRouteSeperatorName,
+            this.getTableName(),
+            encodeURIComponent(instance['id'].toString()));
+        if (!extensions.isNull(parameters)) {
+            var queryString = extensions.url.getQueryString(parameters);
+            urlFragment = extensions.url.combinePathAndQuery(urlFragment, queryString);
         }
 
         // Make the request
@@ -640,7 +637,7 @@ MobileServiceTable.prototype.del = Platform.async(
             headers,
             features,
             function (error, response) {
-                if (!_.isNull(error)) {
+                if (!extensions.isNull(error)) {
                     setServerItemIfPreconditionFailed(error);
                 }
                 callback(error);
@@ -657,8 +654,7 @@ function removeSystemProperties(instance) {
         if ((property != MobileServiceSystemColumns.Version) &&
             (property != MobileServiceSystemColumns.UpdatedAt) &&
             (property != MobileServiceSystemColumns.CreatedAt) &&
-            (property != MobileServiceSystemColumns.Deleted))
-        {
+            (property != MobileServiceSystemColumns.Deleted)) {
             copy[property] = instance[property];
         }
     }
@@ -667,10 +663,10 @@ function removeSystemProperties(instance) {
 
 // Add double quotes and unescape any internal quotes
 function getItemFromResponse(response) {
-    var result = _.fromJson(response.responseText);
+    var result = extensions.fromJson(response.responseText);
     if (response.getResponseHeader) {
         var eTag = response.getResponseHeader('ETag');
-        if (!_.isNullOrEmpty(eTag)) {
+        if (!extensions.isNullOrEmpty(eTag)) {
             result[MobileServiceSystemColumns.Version] = getVersionFromEtag(eTag);
         }
     }
@@ -680,7 +676,7 @@ function getItemFromResponse(response) {
 // Converts an error to precondition failed error
 function setServerItemIfPreconditionFailed(error) {
     if (error.request && error.request.status === 412) {
-        error.serverInstance = _.fromJson(error.request.responseText);
+        error.serverInstance = extensions.fromJson(error.request.responseText);
     }
 }
 
@@ -707,7 +703,7 @@ function addQueryParametersFeaturesIfApplicable(features, userQueryParameters) {
     if (userQueryParameters) {
         if (Array.isArray(userQueryParameters)) {
             hasQueryParameters = userQueryParameters.length > 0;
-        } else if (_.isObject(userQueryParameters)) {
+        } else if (extensions.isObject(userQueryParameters)) {
             for (var k in userQueryParameters) {
                 hasQueryParameters = true;
                 break;

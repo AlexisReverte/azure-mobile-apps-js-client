@@ -1,10 +1,10 @@
 ﻿// ----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ----------------------------------------------------------------------------
-var Validate = require('../Utilities/Validate'),
+const Validate = require('../Utilities/Validate'),
     Platform = require('../Platform'),
     constants = require('../constants'),
-    _ = require('../Utilities/Extensions');
+    extensions = require('../Utilities/Extensions');
 
 exports.Push = Push;
 
@@ -23,7 +23,7 @@ function Push(client, installationId) {
  *
  * @function
  * 
- * @param {string} platform The device platform being used - _'wns'_, _'gcm'_ or _'apns'_.
+ * @param {string} platform The device platform being used - _'wns'_, _'gcm'_ or _'apns'extensions.
  * @param {string} pushChannel The push channel identifier or URI.
  * @param {string} templates An object containing template definitions. Template objects should contain body, headers and tags properties.
  * @param {string} secondaryTiles An object containing template definitions to be used with secondary tiles when using WNS.
@@ -36,12 +36,12 @@ Push.prototype.register = Platform.async(
         Validate.notNullOrEmpty(platform, 'platform');
 
         // in order to support the older callback style completion, we need to check optional parameters
-        if (_.isNull(callback) && (typeof templates === 'function')) {
+        if (extensions.isNull(callback) && (typeof templates === 'function')) {
             callback = templates;
             templates = null;
         }
 
-        if (_.isNull(callback) && (typeof secondaryTiles === 'function')) {
+        if (extensions.isNull(callback) && (typeof secondaryTiles === 'function')) {
             callback = secondaryTiles;
             secondaryTiles = null;
         }
@@ -95,7 +95,7 @@ function stringifyTemplateBodies(templates) {
     for (var templateName in templates) {
         if (templates.hasOwnProperty(templateName)) {
             // clone the template so we are not modifying the original
-            var template = _.extend({}, templates[templateName]);
+            var template = extensions.extend({}, templates[templateName]);
             if (typeof template.body !== 'string') {
                 template.body = JSON.stringify(template.body);
             }

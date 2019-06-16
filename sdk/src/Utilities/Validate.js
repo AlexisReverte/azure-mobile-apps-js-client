@@ -2,8 +2,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ----------------------------------------------------------------------------
 
-var _ = require('./Extensions');
-var Platform = require('../Platform');
+const extensions = require('./Extensions');
+const Platform = require('../Platform');
 
 exports.notNull = function (value, name) {
     /// <summary>
@@ -14,8 +14,8 @@ exports.notNull = function (value, name) {
     /// Optional name of the value to throw.
     /// </param>
 
-    if (_.isNull(value)) {
-        throw _.format(Platform.getResourceString("Validate_NotNullError"), name || 'Value');
+    if (extensions.isNull(value)) {
+        throw extensions.format(Platform.getResourceString("Validate_NotNullError"), name || 'Value');
     }
 };
 
@@ -28,8 +28,8 @@ exports.notNullOrEmpty = function (value, name) {
     /// Optional name of the value to throw.
     /// </param>
 
-    if (_.isNullOrEmpty(value)) {
-        throw _.format(Platform.getResourceString("Validate_NotNullOrEmptyError"), name || 'Value');
+    if (extensions.isNullOrEmpty(value)) {
+        throw extensions.format(Platform.getResourceString("Validate_NotNullOrEmptyError"), name || 'Value');
     }
 };
 
@@ -42,8 +42,8 @@ exports.notNullOrZero = function (value, name) {
     /// Optional name of the value to throw.
     /// </param>
 
-    if (_.isNullOrZero(value)) {
-        throw _.format(Platform.getResourceString("Validate_NotNullOrEmptyError"), name || 'Value');
+    if (extensions.isNullOrZero(value)) {
+        throw extensions.format(Platform.getResourceString("Validate_NotNullOrEmptyError"), name || 'Value');
     }
 };
 
@@ -56,7 +56,7 @@ exports.isValidId = function (value, name) {
     /// Optional name of the value to throw.
     /// </param>
 
-    if (!_.isValidId(value)) {
+    if (!extensions.isValidId(value)) {
         throw new Error((name || 'id') + ' "' + value + '" is not valid.');
     }
 };
@@ -69,10 +69,10 @@ exports.isDate = function (value, name) {
     /// <param name="name" mayBeNull="true" optional="true" type="String">
     /// Optional name of the value to throw.
     /// </param>
-    
-    exports.notNull(value, name);    
-    if (!_.isDate(value)) {
-        throw _.format(
+
+    exports.notNull(value, name);
+    if (!extensions.isDate(value)) {
+        throw extensions.format(
             Platform.getResourceString("TypeCheckError"),
             name || 'Value',
             'Date',
@@ -91,8 +91,8 @@ exports.isNumber = function (value, name) {
 
     exports.notNull(value, name);
 
-    if (!_.isNumber(value)) {
-        throw _.format(
+    if (!extensions.isNumber(value)) {
+        throw extensions.format(
             Platform.getResourceString("TypeCheckError"),
             name || 'Value',
             'Number',
@@ -109,8 +109,8 @@ exports.isFunction = function (value, name) {
     /// Optional name of the value to throw.
     /// </param>
 
-    if (!_.isFunction(value)) {
-        throw _.format(
+    if (!extensions.isFunction(value)) {
+        throw extensions.format(
             Platform.getResourceString("TypeCheckError"),
             name || 'Value',
             'Function',
@@ -132,7 +132,7 @@ exports.isValidParametersObject = function (value, name) {
 
     for (var parameter in value) {
         if (parameter.indexOf('$') === 0) {
-            throw _.format(
+            throw extensions.format(
                 Platform.getResourceString("Validate_InvalidUserParameter"),
                 name,
                 parameter);
@@ -153,7 +153,7 @@ exports.isInteger = function (value, name) {
     exports.isNumber(value, name);
 
     if (parseInt(value, 10) !== parseFloat(value)) {
-        throw _.format(
+        throw extensions.format(
             Platform.getResourceString("TypeCheckError"),
             name || 'Value',
             'number',
@@ -170,8 +170,8 @@ exports.isBool = function (value, name) {
     /// Optional name of the value to throw.
     /// </param>
 
-    if (!_.isBool(value)) {
-        throw _.format(
+    if (!extensions.isBool(value)) {
+        throw extensions.format(
             Platform.getResourceString("TypeCheckError"),
             name || 'Value',
             'number',
@@ -188,8 +188,8 @@ exports.isString = function (value, name) {
     /// Optional name of the value to throw.
     /// </param>
 
-    if (!_.isString(value)) {
-        throw _.format(
+    if (!extensions.isString(value)) {
+        throw extensions.format(
             Platform.getResourceString("TypeCheckError"),
             name || 'Value',
             'string',
@@ -206,8 +206,8 @@ exports.isObject = function (value, name) {
     /// Optional name of the value to throw.
     /// </param>
 
-    if (!_.isObject(value)) {
-        throw _.format(
+    if (!extensions.isObject(value)) {
+        throw extensions.format(
             Platform.getResourceString("TypeCheckError"),
             name || 'Value',
             'object',
@@ -225,7 +225,7 @@ exports.isArray = function (value, name) {
     /// </param>
 
     if (!Array.isArray(value)) {
-        throw _.format(
+        throw extensions.format(
             Platform.getResourceString("TypeCheckError"),
             name || 'Value',
             'array',
@@ -251,7 +251,7 @@ exports.length = function (value, length, name) {
     exports.isInteger(length, 'length');
 
     if (value.length !== length) {
-        throw _.format(
+        throw extensions.format(
             Platform.getResourceString("Validate_LengthUnexpected"),
             name || 'Value',
             length,

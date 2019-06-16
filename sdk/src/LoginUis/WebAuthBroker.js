@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ----------------------------------------------------------------------------
 
-var _ = require('../Utilities/Extensions'),
+const extension = require('../Utilities/Extensions'),
     easyAuthRedirectUriKey = 'post_login_redirect_url';
 
 exports.supportsCurrentRuntime = function () {
@@ -94,11 +94,11 @@ exports.login = function (startUri, endUri, callback) {
             redirectUri = windowsWebAuthBroker.getCurrentApplicationCallbackUri().absoluteUri;
 
         ssoQueryParameter[easyAuthRedirectUriKey] = redirectUri;
-        startUri = _.url.combinePathAndQuery(startUri, _.url.getQueryString(ssoQueryParameter));
+        startUri = extension.url.combinePathAndQuery(startUri, extension.url.getQueryString(ssoQueryParameter));
     }
-    
+
     startUri = new Windows.Foundation.Uri(startUri);
-    
+
     // If authenticateAndContinue method is available, we should use it instead of authenticateAsync.
     // In the event that it exists, but fails (which is the case with Win 10), we fallback to authenticateAsync.
     var isLoginWindowLaunched;
@@ -113,7 +113,7 @@ exports.login = function (startUri, endUri, callback) {
 
     if (!isLoginWindowLaunched) {
         windowsWebAuthBroker.authenticateAsync(noneWebAuthOptions, startUri, endUri)
-        .done(webAuthBrokerSuccessCallback, webAuthBrokerErrorCallback);
+            .done(webAuthBrokerSuccessCallback, webAuthBrokerErrorCallback);
     }
 };
 

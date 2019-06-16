@@ -5,9 +5,9 @@
 // Declare JSHint globals
 /*global XMLHttpRequest:false */
 
-var Validate = require('./Validate');
-var Platform = require('../Platform');
-var _ = exports;
+const Validate = require('./Validate');
+const Platform = require('../Platform');
+const extensions = exports;
 
 exports.isNull = function (value) {
     /// <summary>
@@ -20,7 +20,7 @@ exports.isNull = function (value) {
     /// <returns type="Boolean">
     /// A value indicating whether the provided value is null (or undefined).
     /// </returns>
-    
+
     return value === null || value === undefined;
 };
 
@@ -51,7 +51,7 @@ exports.isNullOrEmpty = function (value) {
     /// A value inHdicating whether the provided value is null (or undefined).
     /// </returns>
 
-    return _.isNull(value) || value.length === 0;
+    return extensions.isNull(value) || value.length === 0;
 };
 
 exports.format = function (message) {
@@ -77,7 +77,7 @@ exports.format = function (message) {
     //    format('{0} {1}', '{1}', 'abc') => 'abc abc'
     //    format('{0}', '{0}') => <stops responding>
 
-    if (!_.isNullOrEmpty(message) && arguments.length > 1) {
+    if (!extensions.isNullOrEmpty(message) && arguments.length > 1) {
         for (var i = 1; i < arguments.length; i++) {
             var pattern = '{' + (i - 1) + '}';
             while (message.indexOf(pattern) !== -1) {
@@ -104,7 +104,7 @@ exports.has = function (value, key) {
     Validate.notNull(key, 'key');
     Validate.isString(key, 'key');
 
-    return !_.isNull(value) && value.hasOwnProperty(key);
+    return !extensions.isNull(value) && value.hasOwnProperty(key);
 };
 
 exports.hasProperty = function (object, properties) {
@@ -114,7 +114,7 @@ exports.hasProperty = function (object, properties) {
     /// <returns type="boolean">True if it contains any one of the properties
     /// </returns>
     for (var i = 0; i < properties.length; i++) {
-        if (_.has(object, properties[i])) {
+        if (extensions.has(object, properties[i])) {
             return true;
         }
     }
@@ -146,7 +146,7 @@ exports.isObject = function (value) {
     /// True if the value is an object (or null), false othwerise.
     /// </returns>
 
-    return _.isNull(value) || (typeof value === 'object' && !_.isDate(value));
+    return extensions.isNull(value) || (typeof value === 'object' && !extensions.isDate(value));
 };
 
 exports.isValidId = function (value) {
@@ -157,11 +157,11 @@ exports.isValidId = function (value) {
     /// <returns type="boolean">
     /// True if the value is a string or number, meeting all criteria, or false othwerise.
     /// </returns>
-    if (_.isNullOrZero(value)) {
+    if (extensions.isNullOrZero(value)) {
         return false;
     }
 
-    if (_.isString(value)) {
+    if (extensions.isString(value)) {
         // Strings must contain at least one non whitespace character
         if (value.length === 0 || value.length > 255 || value.trim().length === 0) {
             return false;
@@ -174,7 +174,7 @@ exports.isValidId = function (value) {
 
         return true;
 
-    } else if (_.isNumber(value)) {
+    } else if (extensions.isNumber(value)) {
         return value > 0;
     }
 
@@ -190,7 +190,7 @@ exports.isString = function (value) {
     /// True if the value is a string (or null), false othwerise.
     /// </returns>
 
-    return _.isNull(value) || (typeof value === 'string');
+    return extensions.isNull(value) || (typeof value === 'string');
 };
 
 exports.isNumber = function (value) {
@@ -202,10 +202,10 @@ exports.isNumber = function (value) {
     /// True if the value is a number, false othwerise.
     /// </returns>
 
-    return !_.isNull(value) && (typeof value === 'number');
+    return !extensions.isNull(value) && (typeof value === 'number');
 };
 
-exports.isInteger = function(value) {
+exports.isInteger = function (value) {
     /// <summary>
     /// Determine if a value is an integer.
     /// </summary>
@@ -214,7 +214,7 @@ exports.isInteger = function(value) {
     /// True if the value is an integer, false othwerise.
     /// </returns>
 
-    return _.isNumber(value) && (parseInt(value, 10) === parseFloat(value));
+    return extensions.isNumber(value) && (parseInt(value, 10) === parseFloat(value));
 };
 
 exports.isBool = function (value) {
@@ -225,7 +225,7 @@ exports.isBool = function (value) {
     /// <returns type="boolean">
     /// True if the value is a boolean, false othwerise.
     /// </returns>
-    return !_.isNull(value) && (typeof value == 'boolean');
+    return !extensions.isNull(value) && (typeof value == 'boolean');
 };
 
 exports.isFunction = function (value) {
@@ -248,7 +248,7 @@ exports.isArray = function (value) {
     /// True if the value is an array (or null), false othwerise.
     /// </returns>
 
-    return !_.isNull(value) && (value.constructor === Array);
+    return !extensions.isNull(value) && (value.constructor === Array);
 };
 
 function classOf(value) {
@@ -263,7 +263,7 @@ exports.isDate = function (value) {
     /// <returns type="boolean">
     /// True if the value is a date, false othwerise.
     /// </returns>
-    return !_.isNull(value) && (classOf(value) == 'date');
+    return !extensions.isNull(value) && (classOf(value) == 'date');
 };
 
 exports.toJson = function (value) {
@@ -284,16 +284,16 @@ exports.fromJson = function (value) {
     /// <returns type="Object">The value as an object.</returns>
 
     var jsonValue = null;
-    if (!_.isNullOrEmpty(value)) {
+    if (!extensions.isNullOrEmpty(value)) {
         // We're wrapping this so we can hook the process and perform custom JSON
         // conversions
         jsonValue = JSON.parse(
             value,
             function (k, v) {
                 // Try to convert the value as a Date
-                if (_.isString(v) && !_.isNullOrEmpty(v)) {
+                if (extensions.isString(v) && !extensions.isNullOrEmpty(v)) {
                     var date = exports.tryParseIsoDateString(v);
-                    if (!_.isNull(date)) {
+                    if (!extensions.isNull(date)) {
                         return date;
                     }
                 }
@@ -335,7 +335,7 @@ exports.mapProperties = function (instance, action) {
     /// <returns elementType="object">Mapped results.</returns>
 
     var results = [];
-    if (!_.isNull(instance)) {
+    if (!extensions.isNull(instance)) {
         var key = null;
         for (key in instance) {
             results.push(action(key, instance[key]));
@@ -434,11 +434,11 @@ exports.compareCaseInsensitive = function (first, second) {
     // possible to have alphabets where several uppercase characters mapped to
     // the same lowercase character.
 
-    if (_.isString(first) && !_.isNullOrEmpty(first)) {
+    if (extensions.isString(first) && !extensions.isNullOrEmpty(first)) {
         first = first.toUpperCase();
     }
 
-    if (_.isString(first) && !_.isNullOrEmpty(second)) {
+    if (extensions.isString(first) && !extensions.isNullOrEmpty(second)) {
         second = second.toUpperCase();
     }
 
@@ -469,13 +469,13 @@ exports.url = {
         Validate.notNullOrEmpty(arguments, 'arguments');
         for (i = 0; i < arguments.length; i++) {
             var segment = arguments[i];
-            Validate.isString(segment, _.format('argument[{0}]', i));
+            Validate.isString(segment, extensions.format('argument[{0}]', i));
 
             if (i !== 0) {
-                segment = _.trimStart(segment || '', _.url.separator);
+                segment = extensions.trimStart(segment || '', extensions.url.separator);
             }
             if (i < arguments.length - 1) {
-                segment = _.trimEnd(segment || '', _.url.separator);
+                segment = extensions.trimEnd(segment || '', extensions.url.separator);
             }
 
             segments.push(segment);
@@ -483,7 +483,7 @@ exports.url = {
 
         // Combine the segments
         return segments.reduce(
-            function (a, b) { return a + _.url.separator + b; });
+            function (a, b) { return a + extensions.url.separator + b; });
     },
 
     getQueryString: function (parameters) {
@@ -492,7 +492,7 @@ exports.url = {
         /// </summary>
         /// <param name="parameters" type="Object">The parameters from which to create a query string.</param>
         /// <returns type="String">A query string</returns>
-        
+
         Validate.notNull(parameters, 'parameters');
         Validate.isObject(parameters, 'parameters');
 
@@ -517,7 +517,7 @@ exports.url = {
         /// <returns type="String>The concatenated URI path and query string.</returns>
         Validate.notNullOrEmpty(path, 'path');
         Validate.isString(path, 'path');
-        if (_.isNullOrEmpty(queryString)) {
+        if (extensions.isNullOrEmpty(queryString)) {
             return path;
         }
         Validate.isString(queryString, 'queryString');
@@ -533,19 +533,19 @@ exports.url = {
         /// <summary>
         /// Currently just a simple check if the url begins with http:// or https:/
         /// </summary>
-        if (_.isNullOrEmpty(url)) {
+        if (extensions.isNullOrEmpty(url)) {
             return false;
         }
 
         var start = url.substring(0, 7).toLowerCase();
-        return (start  == "http://" || start == "https:/");
+        return (start == "http://" || start == "https:/");
     },
 
     isHttps: function (url) {
         /// <summary>
         /// Simple check to verify if url begins with https:/
         /// </summary>
-        if (_.isNullOrEmpty(url)) {
+        if (extensions.isNullOrEmpty(url)) {
             return false;
         }
 
@@ -618,13 +618,13 @@ exports.createError = function (exceptionOrMessage, request) {
 
         error = new Error(message);
         error.request = request;
-    } else if (_.isString(exceptionOrMessage) && !_.isNullOrEmpty(exceptionOrMessage)) {
+    } else if (extensions.isString(exceptionOrMessage) && !extensions.isNullOrEmpty(exceptionOrMessage)) {
         error = new Error(exceptionOrMessage);
     } else if (exceptionOrMessage instanceof Error) { // If exceptionOrMessage is an Error object, use it as-is
-        error = exceptionOrMessage; 
+        error = exceptionOrMessage;
     } else {
         error = new Error(Platform.getResourceString("Extensions_DefaultErrorMessage"));
-        if (!_.isNull(exceptionOrMessage)) error.exception = exceptionOrMessage;
+        if (!extensions.isNull(exceptionOrMessage)) error.exception = exceptionOrMessage;
     }
 
     return error;

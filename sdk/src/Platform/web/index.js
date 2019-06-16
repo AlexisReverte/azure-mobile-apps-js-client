@@ -5,7 +5,7 @@
 /// <reference path="..\Generated\MobileServices.DevIntellisense.js" />
 /*global $__fileVersion__:false, $__version__:false */
 
-var _ = require('../../Utilities/Extensions'),
+const extensions = require('../../Utilities/Extensions'),
     Validate = require('../../Utilities/Validate'),
     Promises = require('../../Utilities/Promises'),
     version = require('../../../../package.json').version,
@@ -22,12 +22,12 @@ try {
     // localStorage is not available
 }
 
-var bestAvailableTransport = null;
-var knownTransports = [ // In order of preference
+let bestAvailableTransport = null;
+const knownTransports = [ // In order of preference
     require('../../Transports/DirectAjaxTransport'),
     require('../../Transports/IframeTransport')
 ];
-var knownLoginUis = [ // In order of preference
+const knownLoginUis = [ // In order of preference
     require('../../LoginUis/WebAuthBroker'),
     require('../../LoginUis/CordovaPopup'),
     require('../../LoginUis/BrowserPopup')
@@ -35,10 +35,10 @@ var knownLoginUis = [ // In order of preference
 
 // Matches an ISO date and separates out the fractional part of the seconds
 // because IE < 10 has quirks parsing fractional seconds
-var isoDateRegex = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d*))?Z$/;
+const isoDateRegex = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d*))?Z$/;
 
 // Feature-detect IE8's date serializer
-var dateSerializerOmitsDecimals = !JSON.stringify(new Date(100)).match(/\.100Z"$/);
+const dateSerializerOmitsDecimals = !JSON.stringify(new Date(100)).match(/\.100Z"$/);
 
 exports.async = function async(func) {
     /// <summary>
@@ -54,20 +54,20 @@ exports.async = function async(func) {
 
     return function () {
         // Capture the context of the original call
-        var that = this;
+        const that = this;
         var args = arguments;
 
         // Create a new promise that will wrap the async call
-        return new Promises.Promise(function (complete, error) {
+        return new Promise(function (resolve, reject) {
 
             // Add a callback to the args which will call the appropriate
             // promise handlers
             var callback = function (err) {
-                if (_.isNull(err)) {
+                if (extensions.isNull(err)) {
                     // Call complete with all the args except for err
-                    complete.apply(null, Array.prototype.slice.call(arguments, 1));
+                    resolve.apply(null, Array.prototype.slice.call(arguments, 1));
                 } else {
-                    error(err);
+                    reject(err);
                 }
             };
             Array.prototype.push.call(args, callback);
@@ -79,13 +79,13 @@ exports.async = function async(func) {
             } catch (ex) {
                 // Thread any immediate errors like parameter validation
                 // through the the callback
-                callback(_.createError(ex));
+                callback(extensions.createError(ex));
             }
         });
     };
 };
 
-exports.readSetting = function readSetting(name) {
+exports.readSetting = (name) => {
     /// <summary>
     /// Read a setting from a global configuration store.
     /// </summary>
@@ -99,7 +99,7 @@ exports.readSetting = function readSetting(name) {
     return inMemorySettingStore[name];
 };
 
-exports.writeSetting = function writeSetting(name, value) {
+exports.writeSetting = (name, value) => {
     /// <summary>
     /// Write a setting to a global configuration store.
     /// </summary>
@@ -174,7 +174,7 @@ exports.toJson = function (value) {
     // TODO: Convert geolocations once they're supported
     // TODO: Expose the ability for developers to convert custom types
     return JSON.stringify(value, function (key, stringifiedValue) {
-        if (dateSerializerOmitsDecimals && this && _.isDate(this[key])) {
+        if (dateSerializerOmitsDecimals && this && extensions.isDate(this[key])) {
             // IE8 doesn't include the decimal part in its serialization of dates
             // For consistency, we extract the non-decimal part from the string
             // representation, and then append the expected decimal part.

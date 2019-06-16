@@ -8,30 +8,29 @@
  * @private
  */
 
-var Validate = require('../Utilities/Validate'),
+const Validate = require('../Utilities/Validate'),
     Platform = require('../Platform'),
     ColumnType = require('./ColumnType'),
     taskRunner = require('../Utilities/taskRunner'),
     tableConstants = require('../constants').table,
-    _ = require('../Utilities/Extensions'),
     Query = require('azure-query-js').Query;
 
-var idPropertyName = tableConstants.idPropertyName,
+const idPropertyName = tableConstants.idPropertyName,
     versionColumnName = tableConstants.sysProps.versionColumnName,
     operationTableName = tableConstants.operationTableName;
-    
+
 function createOperationTableManager(store) {
 
     Validate.isObject(store);
     Validate.notNull(store);
 
-    var runner = taskRunner(),
+    let runner = taskRunner(),
         isInitialized,
         maxOperationId = 0,
         lockedOperationId,
         maxId;
 
-    var api = {
+    const api = {
         initialize: initialize,
         lockOperation: lockOperation,
         unlockOperation: unlockOperation,
@@ -47,7 +46,7 @@ function createOperationTableManager(store) {
     api._getOperationForUpdatingLog = getOperationForUpdatingLog;
 
     return api;
-    
+
     /**
      * Defines the operation table in the local store.
      * Schema of the operation table is: [ INT id | TEXT tableName | TEXT action | TEXT itemId ]
@@ -55,7 +54,7 @@ function createOperationTableManager(store) {
      * @param localStore The local store to create the operation table in.
      * @returns A promise that is resolved when initialization is complete and rejected if it fails.
      */
-    function initialize () {
+    function initialize() {
         return store.defineTable({
             name: operationTableName,
             columnDefinitions: {
@@ -63,16 +62,16 @@ function createOperationTableManager(store) {
                 tableName: ColumnType.String,
                 action: ColumnType.String,
                 itemId: ColumnType.String,
-                metadata: ColumnType.Object 
+                metadata: ColumnType.Object
             }
-        }).then(function() {
+        }).then(function () {
             return getMaxOperationId();
-        }).then(function(id) {
+        }).then(function (id) {
             maxId = id;
             isInitialized = true;
         });
     }
-    
+
     /**
      * Locks the operation with the specified id.
      * 
@@ -84,12 +83,12 @@ function createOperationTableManager(store) {
      * the record would have been deleted.
      */
     function lockOperation(id) {
-        return runner.run(function() {
+        return runner.run(function () {
             // Locking a locked operation should have no effect
             if (lockedOperationId === id) {
                 return;
             }
-            
+
             if (!lockedOperationId) {
                 lockedOperationId = id;
                 return;
@@ -98,16 +97,16 @@ function createOperationTableManager(store) {
             throw new Error('Only one operation can be locked at a time');
         });
     }
-    
+
     /**
      * Unlock the locked operation
      */
     function unlockOperation() {
-        return runner.run(function() {
+        return runner.run(function () {
             lockedOperationId = undefined;
         });
     }
-    
+
     /**
      * Given an operation that will be performed on the store, this method returns a corresponding operation for recording it in the operation table.
      * The logging operation can add a new record, edit an earlier record or remove an earlier record from the operation table.
@@ -119,15 +118,15 @@ function createOperationTableManager(store) {
      * @returns Promise that is resolved with the logging operation. In case of a failure the promise is rejected.
      */
     function getLoggingOperation(tableName, action, item) {
-        
+
         // Run as a single task to avoid task interleaving.
-        return runner.run(function() {
+        return runner.run(function () {
             Validate.notNull(tableName);
             Validate.isString(tableName);
-            
+
             Validate.notNull(action);
             Validate.isString(action);
-            
+
             Validate.notNull(item);
             Validate.isObject(item);
             Validate.isValidId(item[idPropertyName]);
@@ -135,14 +134,14 @@ function createOperationTableManager(store) {
             if (!isInitialized) {
                 throw new Error('Operation table manager is not initialized');
             }
-            
-            return readPendingOperations(tableName, item[idPropertyName]).then(function(pendingOperations) {
-                
+
+            return readPendingOperations(tableName, item[idPropertyName]).then(function (pendingOperations) {
+
                 // Multiple operations can be pending for <tableName, itemId> due to an opertion being locked in the past.
                 // Get the last pending operation
                 var pendingOperation = pendingOperations.pop(),
                     condenseAction;
-                
+
                 // If the operation table has a pending operation, we attempt to condense the new action into the pending operation.
                 // If not, we simply add a new operation.
                 if (pendingOperation) {
@@ -158,30 +157,30 @@ function createOperationTableManager(store) {
                 } else if (condenseAction === 'remove') { // Remove the earlier log from the operation table
                     return getOperationForDeletingLog(pendingOperation.id);
                 } else if (condenseAction === 'nop') { // NO OP. Nothing to be logged
-                    return; 
-                } else  { // Error
+                    return;
+                } else { // Error
                     throw new Error('Unknown condenseAction: ' + condenseAction);
                 }
             });
         });
     }
-    
+
     /**
      * Reads the pending operations for the specified table and item / record ID from the operation table.
      * @param tableName Name of the table whose operations we are looking for
      * @param itemId ID of the record whose operations we are looking for 
      */
     function readPendingOperations(tableName, itemId) {
-        return Platform.async(function(callback) {
+        return Platform.async(function (callback) {
             callback();
-        })().then(function() {
+        })().then(function () {
             var query = new Query(operationTableName);
             return store.read(query.where(function (tableName, itemId) {
                 return this.tableName === tableName && this.itemId === itemId;
             }, tableName, itemId).orderBy('id'));
         });
     }
-    
+
     /**
      * Gets the first / oldest pending operation, i.e. the one with smallest id value
      * 
@@ -189,7 +188,7 @@ function createOperationTableManager(store) {
      * The data record will be present only for insert and update operations.
      */
     function readFirstPendingOperationWithData(lastProcessedOperationId) {
-        return runner.run(function() {
+        return runner.run(function () {
             return readFirstPendingOperationWithDataInternal(lastProcessedOperationId);
         });
     }
@@ -201,11 +200,11 @@ function createOperationTableManager(store) {
      * If no operation is currently locked, the promise is rejected.
      */
     function removeLockedOperation() {
-        return removePendingOperation(lockedOperationId).then(function() {
+        return removePendingOperation(lockedOperationId).then(function () {
             return unlockOperation();
         });
     }
-    
+
 
     // Checks if the specified operation is locked
     function isLocked(operation) {
@@ -214,12 +213,12 @@ function createOperationTableManager(store) {
 
     function readFirstPendingOperationWithDataInternal(lastProcessedOperationId) {
         var logRecord, // the record logged in the operation table
-            query = new Query(operationTableName).where(function(lastProcessedOperationId) {
-                        return this.id > lastProcessedOperationId;
-                    }, lastProcessedOperationId).orderBy('id').take(1);
-        
+            query = new Query(operationTableName).where(function (lastProcessedOperationId) {
+                return this.id > lastProcessedOperationId;
+            }, lastProcessedOperationId).orderBy('id').take(1);
+
         // Read record from operation table with the smallest ID
-        return store.read(query).then(function(result) {
+        return store.read(query).then(function (result) {
             if (result.length === 1) {
                 logRecord = result[0];
             } else if (result.length === 0) { // no pending records
@@ -227,26 +226,26 @@ function createOperationTableManager(store) {
             } else {
                 throw new Error('Something is wrong!');
             }
-        }).then(function() {
+        }).then(function () {
             if (!logRecord) { // no pending records
                 return;
             }
-            
+
             if (logRecord.action === 'delete') {
                 return {
                     logRecord: logRecord
                 };
             }
-            
+
             // Find the data record associated with the log record. 
-            return store.lookup(logRecord.tableName, logRecord.itemId, true /* suppressRecordNotFoundError */).then(function(data) {
+            return store.lookup(logRecord.tableName, logRecord.itemId, true /* suppressRecordNotFoundError */).then(function (data) {
                 if (data) { // Return the log record and the data record.
                     return {
                         logRecord: logRecord,
                         data: data
                     };
                 }
-                
+
                 // It is possible that a log record corresponding to an insert / update operation has no corresponding
                 // data record. 
                 // 
@@ -254,24 +253,24 @@ function createOperationTableManager(store) {
                 // insert -> push / lock operation begins -> delete -> push fails
                 //  
                 // In such a case, we remove the log operation from the operation table and proceed to the next log operation.
-                return removePendingOperationInternal(logRecord.id).then(function() {
+                return removePendingOperationInternal(logRecord.id).then(function () {
                     lastProcessedOperationId = logRecord.id;
                     return readFirstPendingOperationWithDataInternal(lastProcessedOperationId);
                 });
             });
         });
     }
-    
+
     function removePendingOperation(id) {
-        return runner.run(function() {
+        return runner.run(function () {
             return removePendingOperationInternal(id);
         });
     }
 
     function removePendingOperationInternal(id) {
-        return Platform.async(function(callback) {
+        return Platform.async(function (callback) {
             callback();
-        })().then(function() {
+        })().then(function () {
             if (!id) {
                 throw new Error('Invalid operation id');
             }
@@ -287,7 +286,7 @@ function createOperationTableManager(store) {
      *          'add' - if a new operation should be added
      */
     function getCondenseAction(pendingOperation, newAction) {
-        
+
         var pendingAction = pendingOperation.action,
             condenseAction;
         if (pendingAction === 'insert' && newAction === 'update') {
@@ -305,19 +304,19 @@ function createOperationTableManager(store) {
         } else {
             throw new Error('Condense not supported when pending action is ' + pendingAction + ' and new action is ' + newAction);
         }
-        
+
         if (isLocked(pendingOperation)) {
             condenseAction = 'add';
         }
-        
+
         return condenseAction;
     }
-    
+
     /**
      * Gets the operation that will insert a new record in the operation table.
      */
     function getOperationForInsertingLog(tableName, action, item) {
-        return api.getMetadata(tableName, action, item).then(function(metadata) {
+        return api.getMetadata(tableName, action, item).then(function (metadata) {
             return {
                 tableName: operationTableName,
                 action: 'upsert',
@@ -331,12 +330,12 @@ function createOperationTableManager(store) {
             };
         });
     }
-    
+
     /**
      * Gets the operation that will update an existing record in the operation table.
      */
     function getOperationForUpdatingLog(operationId, tableName, action, item) {
-        return api.getMetadata(tableName, action, item).then(function(metadata) {
+        return api.getMetadata(tableName, action, item).then(function (metadata) {
             return {
                 tableName: operationTableName,
                 action: 'upsert',
@@ -348,7 +347,7 @@ function createOperationTableManager(store) {
             };
         });
     }
-    
+
     /**
      * Gets an operation that will delete a record from the operation table.
      */
@@ -367,21 +366,21 @@ function createOperationTableManager(store) {
      *               'upsert' is a special action that is used only in the context of conflict handling.
      */
     function getMetadata(tableName, action, item) {
-        
-        return Platform.async(function(callback) {
+
+        return Platform.async(function (callback) {
             callback();
-        })().then(function() {
+        })().then(function () {
             var metadata = {};
 
             // If action is update and item defines version property OR if action is insert / update,
             // define metadata.version to be the item's version property
-            if (action === 'upsert' || 
+            if (action === 'upsert' ||
                 action === 'insert' ||
                 (action === 'update' && item.hasOwnProperty(versionColumnName))) {
                 metadata[versionColumnName] = item[versionColumnName];
                 return metadata;
             } else if (action == 'update' || action === 'delete') { // Read item's version property from the table
-                return store.lookup(tableName, item[idPropertyName], true /* suppressRecordNotFoundError */).then(function(result) {
+                return store.lookup(tableName, item[idPropertyName], true /* suppressRecordNotFoundError */).then(function (result) {
                     if (result) {
                         metadata[versionColumnName] = result[versionColumnName];
                     }
@@ -391,7 +390,7 @@ function createOperationTableManager(store) {
                 throw new Error('Invalid action ' + action);
             }
         });
-        
+
     }
 
     /**
@@ -400,9 +399,9 @@ function createOperationTableManager(store) {
      */
     function getMaxOperationId() {
         var query = new Query(operationTableName);
-        return store.read(query.orderByDescending('id').take(1)).then(function(result) {
+        return store.read(query.orderByDescending('id').take(1)).then(function (result) {
             Validate.isArray(result);
-            
+
             if (result.length === 0) {
                 return 0;
             } else if (result.length === 1) {

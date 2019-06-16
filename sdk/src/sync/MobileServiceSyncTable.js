@@ -2,9 +2,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ----------------------------------------------------------------------------
 
-var Validate = require('../Utilities/Validate'),
+const Validate = require('../Utilities/Validate'),
     Query = require('azure-query-js').Query,
-    _ = require('../Utilities/Extensions'),
+    extensions = require('../Utilities/Extensions'),
     tableHelper = require('../tableHelper'),
     Platform = require('../Platform');
 
@@ -93,10 +93,10 @@ function MobileServiceSyncTable(tableName, client) {
      *                    If read fails, the promise is rejected with the error.
      */
     this.read = function (query) {
-        if (_.isNull(query)) {
+        if (extensions.isNull(query)) {
             query = new Query(tableName);
         }
-        
+
         return client.getSyncContext().read(query);
     };
 
@@ -128,7 +128,7 @@ function MobileServiceSyncTable(tableName, client) {
         if (!query) {
             query = new Query(tableName);
         }
-        
+
         return client.getSyncContext().pull(query, queryId, settings);
     };
 

@@ -2,14 +2,14 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ----------------------------------------------------------------------------
 
-var _ = require('./Utilities/Extensions');
-var Validate = require('./Utilities/Validate');
-var Platform = require('./Platform');
+const extensions = require('./Utilities/Extensions');
+const Validate = require('./Utilities/Validate');
+const Platform = require('./Platform');
 
-var loginUrl = ".auth/login";
-var loginDone = "done";
-var sessionModeKey = 'session_mode';
-var sessionModeValueToken = 'token';
+const loginUrl = ".auth/login";
+const loginDone = "done";
+const sessionModeKey = 'session_mode';
+const sessionModeValueToken = 'token';
 
 function MobileServiceLogin(client, ignoreFilters) {
     /// <summary>
@@ -26,7 +26,7 @@ function MobileServiceLogin(client, ignoreFilters) {
     /// </param>
 
     // Account for absent optional arguments
-    if (_.isNull(ignoreFilters)) {
+    if (extensions.isNull(ignoreFilters)) {
         ignoreFilters = true;
     }
 
@@ -87,8 +87,8 @@ MobileServiceLogin.prototype.loginWithOptions = function (provider, options, cal
     Validate.isString(provider, 'provider');
     Validate.notNull(provider, 'provider');
 
-    if (_.isNull(callback)) {
-        if (!_.isNull(options) && typeof options === 'function') {
+    if (extensions.isNull(callback)) {
+        if (!extensions.isNull(options) && typeof options === 'function') {
             callback = options;
             options = null;
         } else {
@@ -132,19 +132,19 @@ MobileServiceLogin.prototype.login = function (provider, token, useSingleSignOn,
     /// </param>
 
     // Account for absent optional arguments
-    if (_.isNull(callback)) {
-        if (!_.isNull(useSingleSignOn) && (typeof useSingleSignOn === 'function')) {
+    if (extensions.isNull(callback)) {
+        if (!extensions.isNull(useSingleSignOn) && (typeof useSingleSignOn === 'function')) {
             callback = useSingleSignOn;
             useSingleSignOn = null;
         }
-        else if (!_.isNull(token) && (typeof token === 'function')) {
+        else if (!extensions.isNull(token) && (typeof token === 'function')) {
             callback = token;
             useSingleSignOn = null;
             token = null;
         }
     }
-    if (_.isNull(useSingleSignOn)) {
-        if (_.isBool(token)) {
+    if (extensions.isNull(useSingleSignOn)) {
+        if (extensions.isBool(token)) {
             useSingleSignOn = token;
             token = null;
         }
@@ -154,23 +154,23 @@ MobileServiceLogin.prototype.login = function (provider, token, useSingleSignOn,
     }
 
     // Determine if the provider is actually a Mobile Services authentication token
-    if (_.isNull(token) && this._isAuthToken(provider)) {
+    if (extensions.isNull(token) && this._isAuthToken(provider)) {
         token = provider;
         provider = null;
     }
 
     // Validate parameters; there must be either a provider, a token or both
-    if (_.isNull(provider)) {
+    if (extensions.isNull(provider)) {
         Validate.notNull(token);
         Validate.isString(token);
     }
-    if (_.isNull(token)) {
+    if (extensions.isNull(token)) {
         Validate.notNull(provider);
         Validate.isString(provider);
         provider = provider.toLowerCase();
     }
 
-    if (!_.isNull(provider)) {
+    if (!extensions.isNull(provider)) {
         if (provider.toLowerCase() === 'windowsazureactivedirectory') {
             // The mobile service REST API uses '/login/aad' for Microsoft Azure Active Directory
             provider = 'aad';
@@ -183,7 +183,7 @@ MobileServiceLogin.prototype.login = function (provider, token, useSingleSignOn,
 };
 
 MobileServiceLogin.prototype._isAuthToken = function (value) {
-    return value && _.isString(value) && value.split('.').length === 3;
+    return value && extensions.isString(value) && value.split('.').length === 3;
 };
 
 MobileServiceLogin.prototype.loginWithMobileServiceToken = function (authenticationToken, callback) {
@@ -239,7 +239,7 @@ MobileServiceLogin.prototype.loginWithProvider = function (provider, token, useS
 
     // Validate arguments
     Validate.isString(provider, 'provider');
-    if (!_.isNull(token)) {
+    if (!extensions.isNull(token)) {
         Validate.isObject(token, 'token');
     }
 
@@ -254,7 +254,7 @@ MobileServiceLogin.prototype.loginWithProvider = function (provider, token, useS
     provider = provider.toLowerCase();
 
     // Either login with the token or the platform specific login control.
-    if (!_.isNull(token)) {
+    if (!extensions.isNull(token)) {
         loginWithProviderAndToken(this, provider, token, parameters, callback);
     }
     else {
@@ -283,13 +283,13 @@ function onLoginComplete(error, token, client, callback) {
     /// </param>
     var user = null;
 
-    if (_.isNull(error)) {
+    if (extensions.isNull(error)) {
 
         // Validate the token
-        if (_.isNull(token) ||
-            !_.isObject(token) ||
-            !_.isObject(token.user) ||
-            !_.isString(token.authenticationToken)) {
+        if (extensions.isNull(token) ||
+            !extensions.isObject(token) ||
+            !extensions.isObject(token.user) ||
+            !extensions.isString(token.authenticationToken)) {
             error = Platform.getResourceString("MobileServiceLogin_InvalidResponseFormat");
         }
         else {
@@ -300,7 +300,7 @@ function onLoginComplete(error, token, client, callback) {
         }
     }
 
-    if (!_.isNull(callback)) {
+    if (!extensions.isNull(callback)) {
         callback(error, user);
     }
 }
@@ -326,9 +326,9 @@ function onLoginResponse(error, response, client, callback) {
     /// </param>
 
     var mobileServiceToken = null;
-    if (_.isNull(error)) {
+    if (extensions.isNull(error)) {
         try {
-            mobileServiceToken = _.fromJson(response.responseText);
+            mobileServiceToken = extensions.fromJson(response.responseText);
         }
         catch (e) {
             error = e;
@@ -366,13 +366,13 @@ function loginWithProviderAndToken(login, provider, token, parameters, callback)
     // one-at-a-time restriction.
     login._loginState = { inProcess: true, cancelCallback: null };
 
-    var url = _.url.combinePathSegments(client.alternateLoginHost || client.applicationUrl,
-                                        client.loginUriPrefix || loginUrl,
-                                        provider);
+    var url = extensions.url.combinePathSegments(client.alternateLoginHost || client.applicationUrl,
+        client.loginUriPrefix || loginUrl,
+        provider);
 
-    if (!_.isNull(parameters)) {
-        var queryString = _.url.getQueryString(parameters);
-        url = _.url.combinePathAndQuery(url, queryString);
+    if (!extensions.isNull(parameters)) {
+        var queryString = extensions.url.getQueryString(parameters);
+        url = extensions.url.combinePathAndQuery(url, queryString);
     }
 
     // Invoke the POST endpoint to exchange provider-specific token for a 
@@ -413,7 +413,7 @@ function loginWithLoginControl(login, provider, useSingleSignOn, parameters, cal
     /// </param>
 
     var client = login.getMobileServiceClient();
-    var startUri = _.url.combinePathSegments(
+    var startUri = extensions.url.combinePathSegments(
         client.alternateLoginHost || client.applicationUrl,
         client.loginUriPrefix || loginUrl,
         provider);
@@ -428,12 +428,12 @@ function loginWithLoginControl(login, provider, useSingleSignOn, parameters, cal
     }
     queryParams[sessionModeKey] = sessionModeValueToken;
 
-    var queryString = _.url.getQueryString(queryParams);
-    startUri = _.url.combinePathAndQuery(startUri, queryString);
+    var queryString = extensions.url.getQueryString(queryParams);
+    startUri = extensions.url.combinePathAndQuery(startUri, queryString);
 
     // If not single sign-on, then we need to construct a non-null end uri.
     if (!useSingleSignOn) {
-        endUri = _.url.combinePathSegments(
+        endUri = extensions.url.combinePathSegments(
             client.alternateLoginHost || client.applicationUrl,
             client.loginUriPrefix || loginUrl,
             loginDone);

@@ -7,20 +7,19 @@
  * @private
  */
 
-var Validate = require('../Utilities/Validate'),
+const Validate = require('../Utilities/Validate'),
     Query = require('azure-query-js').Query,
     Platform = require('../Platform'),
     taskRunner = require('../Utilities/taskRunner'),
-    MobileServiceTable = require('../MobileServiceTable'),
     constants = require('../constants'),
     tableConstants = constants.table,
-    _ = require('../Utilities/Extensions');
-    
-var defaultPageSize = 50,
+    extensions = require('../Utilities/Extensions');
+
+const defaultPageSize = 50,
     idPropertyName = tableConstants.idPropertyName,
     pulltimeTableName = tableConstants.pulltimeTableName,
     sysProps = tableConstants.sysProps;
-    
+
 function createPullManager(client, store, storeTaskRunner, operationTableManager) {
     // Task runner for running pull tasks. We want only one pull to run at a time. 
     var pullTaskRunner = taskRunner(),
@@ -30,7 +29,7 @@ function createPullManager(client, store, storeTaskRunner, operationTableManager
         tablePullQuery, // the query specified by the user for pulling the table 
         pagePullQuery, // query for fetching a single page
         pullQueryId; // the query ID. if this is a non-null string, the pull will be performed incrementally.
-    
+
     return {
         initialize: initialize,
         pull: pull
@@ -39,8 +38,8 @@ function createPullManager(client, store, storeTaskRunner, operationTableManager
     /**
      * Creates and initializes the table used to store the state for performing incremental pull
      */
-    function initialize () {
-        return pullTaskRunner.run(function() {
+    function initialize() {
+        return pullTaskRunner.run(function () {
             return store.defineTable({
                 name: pulltimeTableName,
                 columnDefinitions: {
@@ -51,7 +50,7 @@ function createPullManager(client, store, storeTaskRunner, operationTableManager
             });
         });
     }
-    
+
     /**
      * Pulls changes from the server tables into the local store.
      * 
@@ -64,30 +63,30 @@ function createPullManager(client, store, storeTaskRunner, operationTableManager
     function pull(query, queryId, settings) {
         //TODO: support pullQueryId
         //TODO: page size should be configurable
-        
-        return pullTaskRunner.run(function() {
+
+        return pullTaskRunner.run(function () {
             validateQuery(query, 'query');
             Validate.isString(queryId, 'queryId'); // non-null string or null - both are valid
             Validate.isObject(settings, 'settings');
 
             settings = settings || {};
-            if (_.isNull(settings.pageSize)) {
+            if (extensions.isNull(settings.pageSize)) {
                 pageSize = defaultPageSize;
-            } else if (_.isInteger(settings.pageSize) && settings.pageSize > 0) {
+            } else if (extensions.isInteger(settings.pageSize) && settings.pageSize > 0) {
                 pageSize = settings.pageSize;
             } else {
                 throw new Error('Page size must be a positive integer. Page size ' + settings.pageSize + ' is invalid.');
             }
 
             // Make a copy of the query as we will be modifying it
-            tablePullQuery = copyQuery(query);            
+            tablePullQuery = copyQuery(query);
 
             mobileServiceTable = client.getTable(tablePullQuery.getComponents().table);
             mobileServiceTable._features = queryId ? [constants.features.OfflineSync, constants.features.IncrementalPull] : [constants.features.OfflineSync];
             pullQueryId = queryId;
 
             // Set up the query for initiating a pull and then pull all pages          
-            return setupQuery().then(function() {
+            return setupQuery().then(function () {
                 return pullAllPages();
             });
         });
@@ -95,7 +94,7 @@ function createPullManager(client, store, storeTaskRunner, operationTableManager
 
     // Setup the query to get started with pull
     function setupQuery() {
-        return getLastKnownUpdatedAt().then(function(updatedAt) {
+        return getLastKnownUpdatedAt().then(function (updatedAt) {
             buildQueryFromLastKnownUpdateAt(updatedAt);
         });
     }
@@ -107,24 +106,24 @@ function createPullManager(client, store, storeTaskRunner, operationTableManager
         // 3. If it is complete, go to 5. If not, update the query to fetch the next page.
         // 4. Go to 1
         // 5. DONE
-        return pullPage().then(function(pulledRecords) {
+        return pullPage().then(function (pulledRecords) {
             if (!isPullComplete(pulledRecords)) {
                 // update query and continue pulling the remaining pages
-                return updateQueryForNextPage(pulledRecords).then(function() {
+                return updateQueryForNextPage(pulledRecords).then(function () {
                     return pullAllPages();
                 });
             }
         });
     }
-    
+
     // Check if the pull is complete or if there are more records left to be pulled
     function isPullComplete(pulledRecords) {
-         // Pull is NOT complete when the number of fetched records is less than page size as the server's page size
-         // can cause the result set to be smaller than the requested page size.
-         // We consider the pull to be complete only when the result contains 0 records.
+        // Pull is NOT complete when the number of fetched records is less than page size as the server's page size
+        // can cause the result set to be smaller than the requested page size.
+        // We consider the pull to be complete only when the result contains 0 records.
         return pulledRecords.length === 0;
     }
-    
+
     // Pull the page as described by the query
     function pullPage() {
 
@@ -134,29 +133,29 @@ function createPullManager(client, store, storeTaskRunner, operationTableManager
         params[tableConstants.includeDeletedFlag] = true;
 
         var pulledRecords;
-        
+
         // azure-query-js does not support datatimeoffset
         // As a temporary workaround, convert the query to an odata string and replace datetime' with datetimeoffset'. 
         var queryString = pagePullQuery.toOData();
         var tableName = pagePullQuery.getComponents().table;
         queryString = queryString.replace(new RegExp('^/' + tableName), '').replace("datetime'", "datetimeoffset'");
 
-        return mobileServiceTable.read(queryString, params).then(function(result) {
+        return mobileServiceTable.read(queryString, params).then(function (result) {
             pulledRecords = result || [];
 
-            var chain = Platform.async(function(callback) {
+            var chain = Platform.async(function (callback) {
                 callback();
             })();
-            
+
             // Process all records in the page
             for (var i = 0; i < pulledRecords.length; i++) {
-                chain = processPulledRecord(chain, tableName, pulledRecords[i]); 
+                chain = processPulledRecord(chain, tableName, pulledRecords[i]);
             }
 
             return chain;
-        }).then(function(pulled) {
+        }).then(function (pulled) {
             return onPagePulled();
-        }).then(function() {
+        }).then(function () {
             return pulledRecords;
         });
     }
@@ -164,15 +163,15 @@ function createPullManager(client, store, storeTaskRunner, operationTableManager
     // Processes the pulled record by taking an appropriate action, which can be one of:
     // inserting, updating, deleting in the local store or no action at all.
     function processPulledRecord(chain, tableName, pulledRecord) {
-        return chain.then(function() {
+        return chain.then(function () {
 
             // Update the store as per the pulled record 
-            return storeTaskRunner.run(function() {
+            return storeTaskRunner.run(function () {
                 if (Validate.isValidId(pulledRecord[idPropertyName])) {
                     throw new Error('Pulled record does not have a valid ID');
                 }
-                
-                return operationTableManager.readPendingOperations(tableName, pulledRecord[idPropertyName]).then(function(pendingOperations) {
+
+                return operationTableManager.readPendingOperations(tableName, pulledRecord[idPropertyName]).then(function (pendingOperations) {
                     // If there are pending operations for the record we just pulled, we ignore it.
                     if (pendingOperations.length > 0) {
                         return;
@@ -194,36 +193,36 @@ function createPullManager(client, store, storeTaskRunner, operationTableManager
     // For incremental pull, we check if we have any information about it in the store.
     // If not we simply use 1970 to start the sync operation, just like a non-incremental / vanilla pull.
     function getLastKnownUpdatedAt() {
-        
-        return Platform.async(function(callback) {
+
+        return Platform.async(function (callback) {
             callback();
-        })().then(function() {
-            
+        })().then(function () {
+
             if (pullQueryId) { // read lastKnownUpdatedAt from the store
                 return store.lookup(pulltimeTableName, pullQueryId, true /* suppressRecordNotFoundError */);
             }
 
-        }).then(function(result) {
+        }).then(function (result) {
 
             if (result) {
                 return result.value;
             }
 
-            return new Date (1970, 0, 0);
+            return new Date(1970, 0, 0);
         });
     }
 
     // update the query to pull the next page
     function updateQueryForNextPage(pulledRecords) {
-        return Platform.async(function(callback) {
+        return Platform.async(function (callback) {
             callback();
-        })().then(function() {
+        })().then(function () {
 
             if (!pulledRecords) {
                 throw new Error('Something is wrong. pulledRecords cannot be null at this point');
             }
 
-            var lastRecord = pulledRecords[ pulledRecords.length - 1];
+            var lastRecord = pulledRecords[pulledRecords.length - 1];
 
             if (!lastRecord) {
                 throw new Error('Something is wrong. Possibly invalid response from the server. lastRecord cannot be null!');
@@ -231,7 +230,7 @@ function createPullManager(client, store, storeTaskRunner, operationTableManager
 
             var lastRecordTime = lastRecord[tableConstants.sysProps.updatedAtColumnName];
 
-            if (!_.isDate(lastRecordTime)) {
+            if (!extensions.isDate(lastRecordTime)) {
                 throw new Error('Property ' + tableConstants.sysProps.updatedAtColumnName + ' of the last record should be a valid date');
             }
 
@@ -251,7 +250,7 @@ function createPullManager(client, store, storeTaskRunner, operationTableManager
 
         // Make a copy of the table query and tweak it to fetch the next first page
         pagePullQuery = copyQuery(tablePullQuery);
-        pagePullQuery = pagePullQuery.where(function(lastKnownUpdatedAt) {
+        pagePullQuery = pagePullQuery.where(function (lastKnownUpdatedAt) {
             // Ideally we would have liked to set this[tableConstants.sysProps.updatedAtColumnName]
             // but this isn't supported
             return this.updatedAt >= lastKnownUpdatedAt;
@@ -279,13 +278,13 @@ function createPullManager(client, store, storeTaskRunner, operationTableManager
     function validateQuery(query) {
         Validate.isObject(query);
         Validate.notNull(query);
-        
+
         var components = query.getComponents();
-        
+
         for (var i in components.ordering) {
             throw new Error('orderBy and orderByDescending clauses are not supported in the pull query');
         }
-        
+
         if (components.skip) {
             throw new Error('skip is not supported in the pull query');
         }

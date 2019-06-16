@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ----------------------------------------------------------------------------
 
-var _ = require('./Utilities/Extensions'),
+const extensions = require('./Utilities/Extensions'),
     constants = require('./constants'),
     Validate = require('./Utilities/Validate'),
     Platform = require('./Platform'),
@@ -23,9 +23,9 @@ Object.defineProperties(MobileServiceClient.prototype, {
             return this._alternateLoginHost;
         },
         set: function (value) {
-            if (_.isNullOrEmpty(value)) {
+            if (extensions.isNullOrEmpty(value)) {
                 this._alternateLoginHost = this.applicationUrl;
-            }else if (_.url.isAbsoluteUrl(value) && _.url.isHttps(value)) {
+            } else if (extensions.url.isAbsoluteUrl(value) && extensions.url.isHttps(value)) {
                 this._alternateLoginHost = value;
             } else {
                 throw new Error(value + ' is not valid. Expected Absolute Url with https scheme');
@@ -40,10 +40,10 @@ Object.defineProperties(MobileServiceClient.prototype, {
             return this._loginUriPrefix;
         },
         set: function (value) {
-            if (_.isNullOrEmpty(value)) {
+            if (extensions.isNullOrEmpty(value)) {
                 this._loginUriPrefix = ".auth/login";
             } else {
-                _.isString(value);
+                extensions.isString(value);
                 this._loginUriPrefix = value;
             }
         }
@@ -68,10 +68,10 @@ function MobileServiceClient(applicationUrl) {
     var osInfo = Platform.getOperatingSystemInfo();
     var sdkVersion = sdkInfo.fileVersion.split(".").slice(0, 2).join(".");
     this.version = "ZUMO/" + sdkVersion + " (lang=" + sdkInfo.language + "; " +
-                                            "os=" + osInfo.name + "; " +
-                                            "os_version=" + osInfo.version + "; " +
-                                            "arch=" + osInfo.architecture + "; " +
-                                            "version=" + sdkInfo.fileVersion + ")";
+        "os=" + osInfo.name + "; " +
+        "os_version=" + osInfo.version + "; " +
+        "arch=" + osInfo.architecture + "; " +
+        "version=" + sdkInfo.fileVersion + ")";
     this.currentUser = null;
     this._serviceFilter = null;
     this._login = new MobileServiceLogin(this);
@@ -83,7 +83,7 @@ function MobileServiceClient(applicationUrl) {
      * 
      * @returns {MobileServiceSyncContext} The associated {@link MobileServiceSyncContext}.
      */
-    this.getSyncContext = function() {
+    this.getSyncContext = function () {
         return _syncContext;
     };
 
@@ -112,7 +112,7 @@ function MobileServiceClient(applicationUrl) {
 
         Validate.isString(tableName, 'tableName');
         Validate.notNullOrEmpty(tableName, 'tableName');
-		
+
         return new MobileServiceSyncTable(tableName, this);
     };
 
@@ -124,7 +124,7 @@ function MobileServiceClient(applicationUrl) {
          */
         this.push = new Push(this, MobileServiceClient._applicationInstallationId);
     }
-    
+
 }
 
 /**
@@ -193,7 +193,7 @@ MobileServiceClient.prototype.withFilter = function (serviceFilter) {
 
     // Chain the service filter with any existing filters
     var existingFilter = this._serviceFilter;
-    client._serviceFilter = _.isNull(existingFilter) ?
+    client._serviceFilter = extensions.isNull(existingFilter) ?
         serviceFilter :
         function (req, next, callback) {
             // compose existingFilter with next so it can be used as the next
@@ -236,22 +236,22 @@ MobileServiceClient.prototype._request = function (method, uriFragment, content,
     /// </param>
 
     // Account for absent optional arguments
-    if (_.isNull(callback) && (typeof features === 'function')) {
+    if (extensions.isNull(callback) && (typeof features === 'function')) {
         callback = features;
         features = null;
     }
 
-    if (_.isNull(callback) && (typeof headers === 'function')) {
+    if (extensions.isNull(callback) && (typeof headers === 'function')) {
         callback = headers;
         headers = null;
     }
 
-    if (_.isNull(callback) && (typeof ignoreFilters === 'function')) {
+    if (extensions.isNull(callback) && (typeof ignoreFilters === 'function')) {
         callback = ignoreFilters;
         ignoreFilters = false;
     }
 
-    if (_.isNull(callback) && (typeof content === 'function')) {
+    if (extensions.isNull(callback) && (typeof content === 'function')) {
         callback = content;
         content = null;
     }
@@ -264,41 +264,41 @@ MobileServiceClient.prototype._request = function (method, uriFragment, content,
 
     // Create the absolute URI
     var options = { type: method.toUpperCase() };
-    if (_.url.isAbsoluteUrl(uriFragment)) {
+    if (extensions.url.isAbsoluteUrl(uriFragment)) {
         options.url = uriFragment;
     } else {
-        options.url = _.url.combinePathSegments(this.applicationUrl, uriFragment);
+        options.url = extensions.url.combinePathSegments(this.applicationUrl, uriFragment);
     }
 
     // Set MobileServices authentication, application, User-Agent and telemetry headers
     options.headers = {};
-    if (!_.isNull(headers)) {
-        _.extend(options.headers, headers);
+    if (!extensions.isNull(headers)) {
+        extensions.extend(options.headers, headers);
     }
     options.headers["X-ZUMO-INSTALLATION-ID"] = MobileServiceClient._applicationInstallationId;
-    if (this.currentUser && !_.isNullOrEmpty(this.currentUser.mobileServiceAuthenticationToken)) {
+    if (this.currentUser && !extensions.isNullOrEmpty(this.currentUser.mobileServiceAuthenticationToken)) {
         options.headers["X-ZUMO-AUTH"] = this.currentUser.mobileServiceAuthenticationToken;
     }
-    if (!_.isNull(MobileServiceClient._userAgent)) {
+    if (!extensions.isNull(MobileServiceClient._userAgent)) {
         options.headers["User-Agent"] = MobileServiceClient._userAgent;
     }
-    if (!_.isNullOrEmpty["X-ZUMO-VERSION"]) {
+    if (!extensions.isNullOrEmpty["X-ZUMO-VERSION"]) {
         options.headers["X-ZUMO-VERSION"] = this.version;
     }
 
-    if (_.isNull(options.headers[constants.featuresHeaderName]) && features && features.length) {
+    if (extensions.isNull(options.headers[constants.featuresHeaderName]) && features && features.length) {
         options.headers[constants.featuresHeaderName] = features.join(',');
     }
 
     // Add any content as JSON
-    if (!_.isNull(content)) {
-        if (!_.isString(content)) {
-            options.data = _.toJson(content);
+    if (!extensions.isNull(content)) {
+        if (!extensions.isString(content)) {
+            options.data = extensions.toJson(content);
         } else {
             options.data = content;
         }
 
-        if (!_.hasProperty(options.headers, ['Content-Type', 'content-type', 'CONTENT-TYPE', 'Content-type'])) {
+        if (!extensions.hasProperty(options.headers, ['Content-Type', 'content-type', 'CONTENT-TYPE', 'Content-type'])) {
             options.headers['Content-Type'] = 'application/json';
         }
     } else {
@@ -310,17 +310,17 @@ MobileServiceClient.prototype._request = function (method, uriFragment, content,
     // Treat any >=400 status codes as errors.  Also treat the status code 0 as
     // an error (which indicates a connection failure).
     var handler = function (error, response) {
-        if (!_.isNull(error)) {
-            error = _.createError(error);
-        } else if (!_.isNull(response) && (response.status >= 400 || response.status === 0)) {
-            error = _.createError(null, response);
+        if (!extensions.isNull(error)) {
+            error = extensions.createError(error);
+        } else if (!extensions.isNull(response) && (response.status >= 400 || response.status === 0)) {
+            error = extensions.createError(null, response);
             response = null;
         }
         callback(error, response);
     };
 
     // Make the web request
-    if (!_.isNull(this._serviceFilter) && !ignoreFilters) {
+    if (!extensions.isNull(this._serviceFilter) && !ignoreFilters) {
         this._serviceFilter(options, Platform.webRequest, handler);
     } else {
         Platform.webRequest(options, handler);
@@ -345,9 +345,9 @@ MobileServiceClient.prototype._request = function (method, uriFragment, content,
  * @returns {Promise} A promise that is either resolved with the logged in user or rejected with the error.
  */
 MobileServiceClient.prototype.loginWithOptions = Platform.async(
-     function (provider, options, callback) {
-         this._login.loginWithOptions(provider, options, callback);
-     });
+    function (provider, options, callback) {
+        this._login.loginWithOptions(provider, options, callback);
+    });
 
 /**
  * Log a user into an Azure Mobile Apps backend.
@@ -379,7 +379,7 @@ MobileServiceClient.prototype.login = Platform.async(
  * 
  * @returns {Promise} A promise that is either resolved or rejected with the error. 
  */
-MobileServiceClient.prototype.logout = Platform.async(function(callback) {
+MobileServiceClient.prototype.logout = Platform.async(function (callback) {
     this.currentUser = null;
     callback();
 });
@@ -407,7 +407,7 @@ MobileServiceClient.prototype.invokeApi = Platform.async(
         Validate.isString(apiName, 'apiName');
 
         // Account for absent optional arguments
-        if (_.isNull(callback)) {
+        if (extensions.isNull(callback)) {
             if (typeof options === 'function') {
                 callback = options;
                 options = null;
@@ -415,10 +415,10 @@ MobileServiceClient.prototype.invokeApi = Platform.async(
         }
         Validate.notNull(callback, 'callback');
 
-        var parameters, method, body, headers;
-        if (!_.isNull(options)) {
+        let parameters, method, body, headers;
+        if (!extensions.isNull(options)) {
             parameters = options.parameters;
-            if (!_.isNull(parameters)) {
+            if (!extensions.isNull(parameters)) {
                 Validate.isValidParametersObject(options.parameters);
             }
 
@@ -429,42 +429,44 @@ MobileServiceClient.prototype.invokeApi = Platform.async(
 
         headers = headers || {};
 
-        if (_.isNull(method)) {
+        if (extensions.isNull(method)) {
             method = "POST";
         }
 
         // if not specified, default to return results in JSON format
-        if (_.isNull(headers.accept)) {
+        if (extensions.isNull(headers.accept)) {
             headers.accept = 'application/json';
         }
 
         // Add version header on API requests
-        if (_.isNull(headers[constants.apiVersionHeaderName])) {
+        if (extensions.isNull(headers[constants.apiVersionHeaderName])) {
             headers[constants.apiVersionHeaderName] = constants.apiVersion;
         }
 
         // Construct the URL
         var url;
-        if (_.url.isAbsoluteUrl(apiName)) {
+        if (extensions.url.isAbsoluteUrl(apiName)) {
             url = apiName;
         } else {
-            url = _.url.combinePathSegments("api", apiName);
+            url = extensions.url.combinePathSegments("api", apiName);
         }
-        if (!_.isNull(parameters)) {
-            var queryString = _.url.getQueryString(parameters);
-            url = _.url.combinePathAndQuery(url, queryString);
+        if (!extensions.isNull(parameters)) {
+            var queryString = extensions.url.getQueryString(parameters);
+            url = extensions.url.combinePathAndQuery(url, queryString);
         }
 
         var features = [];
-        if (!_.isNullOrEmpty(body)) {
-            features.push(_.isString(body) ?
+        if (!extensions.isNullOrEmpty(body)) {
+            features.push(extensions.isString(body) ?
                 constants.features.GenericApiCall :
                 constants.features.JsonApiCall);
         }
 
-        if (!_.isNull(parameters)) {
+        if (!extensions.isNull(parameters)) {
             features.push(constants.features.AdditionalQueryParameters);
         }
+
+        console.log(this);
 
         // Make the request
         this._request(
@@ -475,7 +477,7 @@ MobileServiceClient.prototype.invokeApi = Platform.async(
             headers,
             features,
             function (error, response) {
-                if (!_.isNull(error)) {
+                if (!extensions.isNull(error)) {
                     callback(error, null);
                 } else {
                     var contentType;
@@ -486,12 +488,12 @@ MobileServiceClient.prototype.invokeApi = Platform.async(
                     // If there was no header / can't get one, try json
                     if (!contentType) {
                         try {
-                            response.result = _.fromJson(response.responseText);
+                            response.result = extensions.fromJson(response.responseText);
                         } catch (e) {
                             // Do nothing, since we don't know the content-type, failing may be ok
                         }
                     } else if (contentType.toLowerCase().indexOf('json') !== -1) {
-                        response.result = _.fromJson(response.responseText);
+                        response.result = extensions.fromJson(response.responseText);
                     }
 
                     callback(null, response);
@@ -515,11 +517,11 @@ function getApplicationInstallationId() {
     // Check if the config settings exist
     var path = "MobileServices.Installation.config";
     var contents = Platform.readSetting(path);
-    if (!_.isNull(contents)) {
+    if (!extensions.isNull(contents)) {
         // Parse the contents of the file as JSON and pull out the
         // application's installation ID.
         try {
-            var config = _.fromJson(contents);
+            var config = extensions.fromJson(contents);
             applicationInstallationId = config.applicationInstallationId;
         } catch (ex) {
             // Ignore any failures (like invalid JSON, etc.) which will allow
@@ -531,11 +533,11 @@ function getApplicationInstallationId() {
     // settings.  This is pulled out as a separate function because we'll do it
     // even if we successfully read an existing config but there's no
     // installation ID.
-    if (_.isNullOrEmpty(applicationInstallationId)) {
-        applicationInstallationId = _.createUniqueInstallationId();
+    if (extensions.isNullOrEmpty(applicationInstallationId)) {
+        applicationInstallationId = extensions.createUniqueInstallationId();
 
         // TODO: How many other settings should we write out as well?
-        var configText = _.toJson({ applicationInstallationId: applicationInstallationId });
+        var configText = extensions.toJson({ applicationInstallationId: applicationInstallationId });
         Platform.writeSetting(path, configText);
     }
 

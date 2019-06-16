@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ----------------------------------------------------------------------------
 
-var _ = require('./Utilities/Extensions');
+const extensions = require('./Utilities/Extensions');
 
 /**
  * This module is the entry point for the _Azure Mobile Apps Javascript client SDK_. 
@@ -28,7 +28,7 @@ var _ = require('./Utilities/Extensions');
  * 
  * @exports azure-mobile-apps-client
  */
-var api = { // Modules that need to be exposed outside the SDK for all targets
+const api = { // Modules that need to be exposed outside the SDK for all targets
     /**
      * @type {MobileServiceClient} 
      */
@@ -41,11 +41,11 @@ var api = { // Modules that need to be exposed outside the SDK for all targets
 };
 
 // Target (i.e. Cordova / Browser / etc) specific definitions that need to be exposed outside the SDK
-var targetExports = require('./Platform/sdkExports');
+const targetExports = require('./Platform/sdkExports');
 
 // Export shared as well as target specific APIs
-for (var i in targetExports) {
-    if ( _.isNull(api[i]) ) {
+for (let i in targetExports) {
+    if (extensions.isNull(api[i])) {
         api[i] = targetExports[i];
     } else {
         throw new Error('Cannot export definition ' + i + ' outside the SDK. Multiple definitions with the same name exist');

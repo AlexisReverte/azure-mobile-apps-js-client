@@ -7,14 +7,14 @@
  * @private
  */
 
-var Validate = require('../Utilities/Validate'),
+const Validate = require('../Utilities/Validate'),
     Query = require('azure-query-js').Query,
     Platform = require('../Platform'),
     taskRunner = require('../Utilities/taskRunner'),
     MobileServiceTable = require('../MobileServiceTable'),
     tableConstants = require('../constants').table,
-    _ = require('../Utilities/Extensions');
-    
+    extensions = require('../Utilities/Extensions');
+
 function createPurgeManager(store, storeTaskRunner) {
 
     return {
@@ -33,22 +33,22 @@ function createPurgeManager(store, storeTaskRunner) {
      * @returns A promise that is fulfilled when purge is complete OR is rejected if it fails.  
      */
     function purge(query, forcePurge) {
-        return storeTaskRunner.run(function() {
+        return storeTaskRunner.run(function () {
             Validate.isObject(query, 'query');
             Validate.notNull(query, 'query');
-            if (!_.isNull(forcePurge)) {
+            if (!extensions.isNull(forcePurge)) {
                 Validate.isBool(forcePurge, 'forcePurge');
             }
 
             // Query for pending operations associated with this table
             var operationQuery = new Query(tableConstants.operationTableName)
-                .where(function(tableName) {
-                    return this.tableName === tableName; 
+                .where(function (tableName) {
+                    return this.tableName === tableName;
                 }, query.getComponents().table);
-            
+
             // Query to search for the incremental sync state associated with this table
             var incrementalSyncStateQuery = new Query(tableConstants.pulltimeTableName)
-                .where(function(tableName) {
+                .where(function (tableName) {
                     return this.tableName === tableName;
                 }, query.getComponents().table);
 
@@ -63,21 +63,21 @@ function createPurgeManager(store, storeTaskRunner) {
             // will not re-fetch purged records. Hence, it is important to run 2 before 3.
             // There still exists a possibility of pending operations being deleted while force purging and the subsequent
             // operations failing which is tracked by the above TODO. 
-            return Platform.async(function(callback) {
+            return Platform.async(function (callback) {
                 callback();
-            })().then(function() {
+            })().then(function () {
                 if (forcePurge) {
                     return store.del(operationQuery);
                 } else {
-                    return store.read(operationQuery).then(function(operations) {
+                    return store.read(operationQuery).then(function (operations) {
                         if (operations.length > 0) {
                             throw new Error('Cannot purge the table as it contains pending operations');
                         }
                     });
                 }
-            }).then(function() {
+            }).then(function () {
                 return store.del(incrementalSyncStateQuery);
-            }).then(function() {
+            }).then(function () {
                 return store.del(query);
             });
         });

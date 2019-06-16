@@ -7,11 +7,11 @@
  * @private
  */
 
-var Platform = require('../Platform'),
-    _ = require('../Utilities/Extensions'),
+const Platform = require('../Platform'),
+    extensions = require('../Utilities/Extensions'),
     tableConstants = require('../constants').table;
-    
-var operationTableName = tableConstants.operationTableName,
+
+const operationTableName = tableConstants.operationTableName,
     deletedColumnName = tableConstants.sysProps.deletedColumnName;
 
 /**
@@ -28,7 +28,7 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
     // we make a copy of its members we may need later.
     var serverRecord = makeCopy(operationError.serverInstance),
         statusCode = makeCopy(operationError.request.status);
-    
+
     /**
      * @class PushError
      * @classdesc A conflict / error encountered while pushing a change to the server. This wraps the underlying error
@@ -46,10 +46,10 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
         isHandled: false,
 
         getError: getError,
-        
+
         // Helper methods
         isConflict: isConflict,
-        
+
         // Data query methods
         getTableName: getTableName,
         getAction: getAction,
@@ -76,7 +76,7 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
     function getTableName() {
         return makeCopy(pushOperation.logRecord.tableName);
     }
-    
+
     /**
      * Gets the action for which conflict / error occurred.
      * 
@@ -85,12 +85,12 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
      * @memberof PushError 
      * 
      * @returns {string} The action for which conflict / error occurred. Valid action values
-     *                   are _'insert'_, _'update'_ or _'delete'_.
+     *                   are _'insert'_, _'update'_ or _'delete'extensions.
      */
     function getAction() {
         return makeCopy(pushOperation.logRecord.action);
     }
-    
+
     /**
      * Gets the value of the record on the server, if available, when the conflict / error occurred.
      * This is useful while handling conflicts. However, **note** that in the event of
@@ -107,7 +107,7 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
     function getServerRecord() {
         return makeCopy(serverRecord);
     }
-    
+
     /**
      * Gets the value of the record that was pushed to the server when the conflict /error occurred.
      * Note that this may not be the latest value as local tables could have changed after we
@@ -122,7 +122,7 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
     function getClientRecord() {
         return makeCopy(pushOperation.data);
     }
-    
+
     /**
      * Gets the underlying error encountered while performing the push operation. This contains
      * grannular details of the failure like server response, error code, etc.
@@ -140,7 +140,7 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
         // Return without cloning.
         return operationError;
     }
-    
+
     /**
      * Checks if the error is a conflict.
      * 
@@ -153,7 +153,7 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
     function isConflict() {
         return statusCode === 409 || statusCode === 412;
     }
-    
+
     /**
      * Cancels the push operation for the current record and updates the record in the local store.
      * This will also set {@link PushError#isHandled} to true.
@@ -169,46 +169,46 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
      */
     function cancelAndUpdate(newValue) {
         var self = this;
-        return storeTaskRunner.run(function() {
+        return storeTaskRunner.run(function () {
 
             if (pushOperation.logRecord.action === 'delete') {
                 throw new Error('Cannot update a deleted record');
             }
-            
-            if (_.isNull(newValue)) {
+
+            if (extensions.isNull(newValue)) {
                 throw new Error('Need a valid object to update the record');
             }
-            
-            if (!_.isValidId(newValue.id)) {
+
+            if (!extensions.isValidId(newValue.id)) {
                 throw new Error('Invalid ID: ' + newValue.id);
             }
-            
+
             if (newValue.id !== pushOperation.data.id) {
                 throw new Error('Only updating the record being pushed is allowed');
             }
-            
+
             // Operation to update the data record
             var dataUpdateOperation = {
                 tableName: pushOperation.logRecord.tableName,
                 action: 'upsert',
                 data: newValue
             };
-            
+
             // Operation to delete the log record
             var logDeleteOperation = {
                 tableName: operationTableName,
                 action: 'delete',
                 id: pushOperation.logRecord.id
             };
-            
+
             // Execute the log and data operations
             var operations = [dataUpdateOperation, logDeleteOperation];
-            return store.executeBatch(operations).then(function() {
+            return store.executeBatch(operations).then(function () {
                 self.isHandled = true;
             });
         });
     }
-    
+
     /**
      * Cancels the push operation for the current record and discards the record from the local store.
      * This will also set {@link PushError#isHandled} to true.
@@ -222,30 +222,30 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
      */
     function cancelAndDiscard() {
         var self = this;
-        return storeTaskRunner.run(function() {
-            
+        return storeTaskRunner.run(function () {
+
             // Operation to delete the data record
             var dataDeleteOperation = {
                 tableName: pushOperation.logRecord.tableName,
                 action: 'delete',
                 id: pushOperation.logRecord.itemId
             };
-            
+
             // Operation to delete the log record
             var logDeleteOperation = {
                 tableName: operationTableName,
                 action: 'delete',
                 id: pushOperation.logRecord.id
             };
-            
+
             // Execute the log and data operations
             var operations = [dataDeleteOperation, logDeleteOperation];
-            return store.executeBatch(operations).then(function() {
+            return store.executeBatch(operations).then(function () {
                 self.isHandled = true;
             });
         });
     }
-    
+
     /**
      * Updates the client data record associated with the current operation.
      * If required, the metadata in the log record will also be associated.
@@ -261,19 +261,19 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
      */
     function update(newValue) {
         var self = this;
-        return storeTaskRunner.run(function() {
+        return storeTaskRunner.run(function () {
             if (pushOperation.logRecord.action === 'delete') {
                 throw new Error('Cannot update a deleted record');
             }
-            
-            if (_.isNull(newValue)) {
+
+            if (extensions.isNull(newValue)) {
                 throw new Error('Need a valid object to update the record');
             }
-            
-            if (!_.isValidId(newValue.id)) {
+
+            if (!extensions.isValidId(newValue.id)) {
                 throw new Error('Invalid ID: ' + newValue.id);
             }
-            
+
             if (newValue.id !== pushOperation.data.id) {
                 throw new Error('Only updating the record being pushed is allowed');
             }
@@ -281,7 +281,7 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
             //TODO: Do we need to disallow updating record if the record has been deleted after
             //we attempted push?
 
-            return operationTableManager.getMetadata(pushOperation.logRecord.tableName, 'upsert', newValue).then(function(metadata) {
+            return operationTableManager.getMetadata(pushOperation.logRecord.tableName, 'upsert', newValue).then(function (metadata) {
                 pushOperation.logRecord.metadata = metadata;
                 return store.executeBatch([
                     { // Update the log record
@@ -294,14 +294,14 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
                         action: 'upsert',
                         data: newValue
                     }
-                ]).then(function() {
+                ]).then(function () {
                     self.isHandled = this;
                 });
             });
 
         });
     }
-    
+
     /**
      * Changes the type of operation that will be pushed to the server.
      * This is useful for handling conflicts where you might need to change the type of the 
@@ -318,7 +318,7 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
      * @instance
      * @memberof PushError
      * 
-     * @param {string} newAction New type of the operation. Valid values are _'insert'_, _'update'_ and _'delete'_.
+     * @param {string} newAction New type of the operation. Valid values are _'insert'_, _'update'_ and _'delete'extensions.
      * @param {object} [newClientRecord] New value of the client record. 
      *                          The `id` property of the new record should match the `id` property of the original record.
      *                          If `newAction` is _'delete'_, only the `id` and `version` properties will be read from `newClientRecord`.
@@ -331,7 +331,7 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
      */
     function changeAction(newAction, newClientRecord) {
         var self = this;
-        return storeTaskRunner.run(function() {
+        return storeTaskRunner.run(function () {
             var dataOperation, // operation to edit the data record
                 logOperation = { // operation to edit the log record 
                     tableName: operationTableName,
@@ -345,10 +345,10 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
                 if (!newClientRecord.id) {
                     throw new Error('New client record value must specify the record ID');
                 }
-                    
+
                 if (newClientRecord.id !== pushOperation.logRecord.itemId) {
                     throw new Error('New client record value cannot change the record ID. Original ID: ' +
-                                    pushOperation.logRecord.id + ' New ID: ' + newClientRecord.id);
+                        pushOperation.logRecord.id + ' New ID: ' + newClientRecord.id);
                 }
 
                 // FYI: logOperation.data and pushOperation.data are not the same thing!
@@ -357,29 +357,29 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
             }
 
             if (newAction === 'insert' || newAction === 'update') {
-                
+
                 // Change the action as specified
                 var oldAction = logOperation.data.action;
                 logOperation.data.action = newAction;
 
                 // Update the client record, if a new value is specified
                 if (newClientRecord) {
-                    
+
                     dataOperation = {
                         tableName: pushOperation.logRecord.tableName,
                         action: 'upsert',
                         data: newClientRecord
                     };
-                    
+
                 } else if (oldAction !== 'insert' && oldAction !== 'update') {
 
                     // If we are here, it means we are changing the action from delete to insert / update. 
                     // In such a case we expect newClientRecord to be non-null as we won't otherwise know what to insert / update.
                     // Example: changing delete to insert without specifying a newClientRecord is meaningless.
                     throw new Error('Changing action from ' + oldAction + ' to ' + newAction +
-                                    ' without specifying a value for the associated record is not allowed!');
+                        ' without specifying a value for the associated record is not allowed!');
                 }
-                
+
             } else if (newAction === 'delete' || newAction === 'del') {
 
                 // Change the action to 'delete'
@@ -395,14 +395,14 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
             } else {
                 throw new Error('Action ' + newAction + ' not supported.');
             }
-            
+
             // Execute the log and data operations
-            return store.executeBatch([logOperation, dataOperation]).then(function() {
+            return store.executeBatch([logOperation, dataOperation]).then(function () {
                 self.isHandled = true;
             });
         });
     }
-    
+
     /**
      * Cancels pushing the current operation to the server permanently.
      * This will also set {@link PushError#isHandled} to true.
@@ -420,8 +420,8 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
      */
     function cancel() {
         var self = this;
-        return storeTaskRunner.run(function() {
-            return store.del(operationTableName, pushOperation.logRecord.id).then(function() {
+        return storeTaskRunner.run(function () {
+            return store.del(operationTableName, pushOperation.logRecord.id).then(function () {
                 self.isHandled = true;
             });
         });
@@ -430,8 +430,8 @@ function createPushError(store, operationTableManager, storeTaskRunner, pushOper
 
 function makeCopy(value) {
     const dateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/;
-    if (!_.isNull(value)) {
-        value = JSON.parse(JSON.stringify(value), function(key, value) {
+    if (!extensions.isNull(value)) {
+        value = JSON.parse(JSON.stringify(value), function (key, value) {
             if (typeof value === "string" && dateFormat.test(value)) {
                 return new Date(value);
             }
@@ -446,10 +446,10 @@ function makeCopy(value) {
  * @private
  */
 function handlePushError(pushError, pushHandler) {
-    return Platform.async(function(callback) {
+    return Platform.async(function (callback) {
         callback();
-    })().then(function() {
-        
+    })().then(function () {
+
         if (pushError.isConflict()) {
             if (pushHandler && pushHandler.onConflict) {
                 // NOTE: value of server record will not be available in case of 409.
@@ -459,7 +459,7 @@ function handlePushError(pushError, pushHandler) {
             return pushHandler.onError(pushError);
         }
 
-    }).then(undefined, function(error) {
+    }).then(undefined, function (error) {
         // Set isHandled to false even if the user has set it to handled if the onConflict / onError failed 
         pushError.isHandled = false;
     });
